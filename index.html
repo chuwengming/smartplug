@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能插座 操作手冊</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            line-height: 1.8;
+            background-color: #f8f9fa;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        h1, h2, h3 {
+            color: #0056b3;
+            border-left: 5px solid #007bff;
+            padding-left: 15px;
+            margin-top: 40px;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            border-left: none;
+            padding-left: 0;
+            color: #343a40;
+        }
+
+        p, li {
+            font-size: 16px;
+            color: #555;
+        }
+
+        .card {
+            background-color: #fdfdfd;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 25px;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
+        }
+
+        .card-title {
+            font-weight: 700;
+            font-size: 1.2em;
+            color: #007bff;
+            margin-top: 0;
+        }
+        
+        .code-block {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #495057;
+            margin: 15px 0;
+        }
+
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        li {
+            padding-left: 25px;
+            position: relative;
+        }
+
+        li::before {
+            content: '✓';
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .note {
+            background-color: #fff3cd;
+            border-left: 5px solid #ffc107;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .section-intro {
+            text-align: center;
+            color: #6c757d;
+            font-size: 1.1em;
+            margin-bottom: 40px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+
+        <h1>智能插座 產品操作手冊</h1>
+        <p class="section-intro">歡迎使用我們的智能插座！本手冊將引導您完成從初次啟動到進階設定的所有步驟，讓您輕鬆享受智慧生活的便利。</p>
+
+        <!-- 智能插座介紹 -->
+        <section id="introduction">
+            <h2>產品簡介</h2>
+            <div class="card">
+                <ul>
+                    <li><strong>快速連結：</strong>掃描設備上的 QR Code，即可快速進入設備操作說明頁面。</li>
+                    <li><strong>網路連接：</strong>支援 Wi-Fi 及乙太網路連接，啟動後可透過手機或電腦瀏覽器，輸入 IP 位址進行連接。</li>
+                    <li><strong>多裝置同步：</strong>可同時與多個手機或電腦同步使用，所有資訊與操作狀態將即時反應在每個裝置上。</li>
+                    <li><strong>專人管理：</strong>為確保設定一致性，建議安排一位設備管理員負責執行所有管理與設定工作。</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 設備初次啟動 -->
+        <section id="initial-setup">
+            <h2>首次啟動設定</h2>
+            
+            <div class="card">
+                <h3 class="card-title">Wi-Fi 版本設定</h3>
+                <ol>
+                    <li>在瀏覽器輸入網址：<span class="code-block" style="display: inline-block; padding: 2px 8px;">http://192.168.4.1</span></li>
+                    <li>輸入預設密碼：<span class="code-block" style="display: inline-block; padding: 2px 8px;">123456</span></li>
+                    <li>進入主頁面後，點擊「系統設定」進行後續配置。</li>
+                </ol>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">乙太網路版本設定</h3>
+                <ol>
+                    <li>在瀏覽器輸入網址：<span class="code-block" style="display: inline-block; padding: 2px 8px;">http://smartplug.local</span></li>
+                    <li>輸入預設密碼：<span class="code-block" style="display: inline-block; padding: 2px 8px;">123456</span></li>
+                    <li>進入主頁面後，點擊「系統設定」進行後續配置。</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- 查找設備 IP -->
+        <section id="find-ip">
+            <h2>如何查找設備的 IP 位址？</h2>
+            <p>當設備連接到您的區域網路後，您可以透過以下方式找到它的 IP 位址，以便進行訪問。</p>
+            
+            <div class="card">
+                <h3 class="card-title">方法一：登入路由器管理介面 (最常用)</h3>
+                <p><strong>1. 進入路由器管理頁面：</strong></p>
+                <p>在瀏覽器輸入您的路由器管理地址，常見地址如下：</p>
+                <div class="code-block">192.168.1.1 (最常見)<br>192.168.0.1<br>router.asus.com (ASUS)<br>tplinkwifi.net (TP-Link)</div>
+                <p><strong>2. 登入帳號密碼：</strong></p>
+                <p>輸入路由器的帳號和密碼。若未修改過，可參考預設值 (如 admin/admin) 或路由器背面的標籤。</p>
+                <p><strong>3. 查找連接設備列表：</strong></p>
+                <p>在管理介面中尋找類似「DHCP 客戶端列表」、「連接設備」或「網路地圖」的選項，即可找到智能插座的 IP 位址。</p>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">方法二：使用手機 APP 掃描</h3>
+                <p>推薦使用如 <strong>Fing</strong> 等網路掃描工具 App，安裝後開啟即可自動掃描區域網路內的所有設備，並列出其 IP、MAC 位址和設備類型。</p>
+            </div>
+        </section>
+
+        <!-- 主頁面功能 -->
+        <section id="main-interface">
+            <h2>主頁面功能導覽</h2>
+            <div class="card">
+                <ul>
+                    <li><strong>溫度值顯示：</strong>頁面上方將每 2 秒實時更新當前設備偵測到的溫度 (°C)。</li>
+                    <li><strong>連線狀態：</strong>頁面右上角會顯示設備的 WebSocket 連線狀態。</li>
+                    <li><strong>溫度紀錄：</strong>點擊進入溫度紀錄查詢頁面。</li>
+                    <li><strong>系統設定：</strong>點擊進入設備的詳細設定頁面。</li>
+                    <li><strong>登出：</strong>斷開網路連結，安全離開操作介面。</li>
+                    <li><strong>繼電器控制面板：</strong>
+                        <ul>
+                            <li style="padding-left: 20px;"><strong>開關操作：</strong>可個別控制最多 6 個繼電器的開啟與關閉。</li>
+                            <li style="padding-left: 20px;"><strong>滑動操作：</strong>向右滑動開啟，向左滑動關閉，設備將同步執行。</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 系統設定 -->
+        <section id="system-settings">
+            <h2>系統設定詳解</h2>
+            <div class="note">
+                <strong>重要提示：</strong>所有設定修改後，請務必點擊「儲存設定」按鈕，設定值將在設備下次重啟後生效。
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">輸入資料規格</h3>
+                <ul>
+                    <li><strong>機櫃名稱：</strong>0-10 字元，支援中英文。</li>
+                    <li><strong>設備密碼：</strong>6-20 字元，支援英文字母與數字。</li>
+                    <li><strong>Wi-Fi SSID：</strong>4-32 字元，僅支援英文字母。</li>
+                    <li><strong>Wi-Fi 密碼：</strong>8-64 字元，支援英文字母與數字。</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h3 class="card-title">功能選項說明</h3>
+                <ul>
+                    <li><strong>儲存設定：</strong>將當前頁面的所有設定儲存至設備記憶體中。</li>
+                    <li><strong>回復原廠設定：</strong>將所有設定還原至出廠預設值（登入密碼將重設為 123456）。</li>
+                    <li><strong>重新啟動：</strong>設備將在 3 秒後重新啟動。</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 溫度記錄 -->
+        <section id="temperature-log">
+            <h2>溫度記錄功能</h2>
+            <div class="card">
+                <h3 class="card-title">記錄規則</h3>
+                <ul>
+                    <li>設備啟動後，每 30 分鐘會自動記錄一筆溫度資料。</li>
+                    <li>每日的紀錄會儲存在對應的檔案中 (例如週一的紀錄在 monday.txt)。</li>
+                    <li>系統會自動循環覆蓋紀錄：例如，下週一的紀錄將會覆蓋本週一的紀錄。</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3 class="card-title">查閱與下載</h3>
+                <ul>
+                    <li><strong>檔案選擇：</strong>可透過下拉選單選擇欲查看的日期檔案 (sunday.txt ~ saturday.txt)。</li>
+                    <li><strong>檔案下載：</strong>選擇檔案後，可將其下載至您的裝置中。</li>
+                    <li><strong>即時顯示：</strong>頁面會直接顯示當日的溫度記錄，格式為「西元年/月/日 時:分:秒 溫度值(°C)」。</li>
+                </ul>
+            </div>
+        </section>
+
+    </div>
+
+</body>
+</html>
