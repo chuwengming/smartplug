@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能插座 操作手冊</title>
+    <title>智慧插座操作手冊</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
 
@@ -11,240 +11,279 @@
             font-family: 'Noto Sans TC', sans-serif;
             line-height: 1.8;
             background-color: #f8f9fa;
-            color: #333;
+            color: #343a40;
             margin: 0;
-            padding: 20px;
+            padding: 0;
         }
 
         .container {
             max-width: 800px;
             margin: 40px auto;
+            padding: 20px;
             background-color: #ffffff;
-            padding: 40px;
             border-radius: 12px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
         }
 
-        h1, h2, h3 {
+        header {
+            text-align: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        header h1 {
+            color: #0056b3;
+            font-weight: 700;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: #6c757d;
+            font-size: 1.1rem;
+        }
+
+        section {
+            margin-top: 40px;
+        }
+
+        h2 {
+            font-size: 1.8rem;
             color: #0056b3;
             border-left: 5px solid #007bff;
             padding-left: 15px;
-            margin-top: 40px;
-            margin-bottom: 20px;
-        }
-
-        h1 {
-            text-align: center;
-            font-size: 2.5em;
-            border-left: none;
-            padding-left: 0;
-            color: #343a40;
-        }
-
-        p, li {
-            font-size: 16px;
-            color: #555;
-        }
-
-        .card {
-            background-color: #fdfdfd;
-            border: 1px solid #e9ecef;
-            border-radius: 8px;
-            padding: 25px;
             margin-bottom: 25px;
-            transition: box-shadow 0.3s ease;
-        }
-
-        .card:hover {
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
-        }
-
-        .card-title {
             font-weight: 700;
-            font-size: 1.2em;
-            color: #007bff;
-            margin-top: 0;
-        }
-        
-        .code-block {
-            background-color: #e9ecef;
-            padding: 15px;
-            border-radius: 5px;
-            font-family: 'Courier New', Courier, monospace;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            color: #495057;
-            margin: 15px 0;
         }
 
-        ul {
-            list-style-type: none;
-            padding-left: 0;
+        h3 {
+            font-size: 1.4rem;
+            color: #17a2b8;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+
+        ul, ol {
+            padding-left: 25px;
         }
 
         li {
-            padding-left: 25px;
-            position: relative;
+            margin-bottom: 12px;
         }
 
-        li::before {
-            content: '✓';
-            position: absolute;
-            left: 0;
-            color: #28a745;
-            font-weight: bold;
+        .card {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .card-header {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: #343a40;
+            margin-bottom: 15px;
+        }
+
+        .icon {
+            display: inline-block;
+            margin-right: 10px;
+            color: #007bff;
+            font-size: 1.2em;
+        }
+        
+        strong {
+            color: #0056b3;
+            font-weight: 500;
+        }
+
+        code {
+            background-color: #e9ecef;
+            color: #c0392b;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', Courier, monospace;
         }
 
         .note {
             background-color: #fff3cd;
             border-left: 5px solid #ffc107;
-            padding: 15px 20px;
-            margin: 20px 0;
-            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 0 8px 8px 0;
         }
         
-        .section-intro {
-            text-align: center;
-            color: #6c757d;
-            font-size: 1.1em;
-            margin-bottom: 40px;
+        .note p {
+            margin: 0;
+            color: #856404;
         }
 
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
+        <header>
+            <h1><span class="icon">🔌</span>智慧插座使用說明書</h1>
+            <p>輕鬆設定，智慧生活</p>
+        </header>
 
-        <h1>智能插座 產品操作手冊</h1>
-        <p class="section-intro">歡迎使用我們的智能插座！本手冊將引導您完成從初次啟動到進階設定的所有步驟，讓您輕鬆享受智慧生活的便利。</p>
-
-        <!-- 智能插座介紹 -->
         <section id="introduction">
-            <h2>產品簡介</h2>
-            <div class="card">
-                <ul>
-                    <li><strong>快速連結：</strong>掃描設備上的 QR Code，即可快速進入設備操作說明頁面。</li>
-                    <li><strong>網路連接：</strong>支援 Wi-Fi 及乙太網路連接，啟動後可透過手機或電腦瀏覽器，輸入 IP 位址進行連接。</li>
-                    <li><strong>多裝置同步：</strong>可同時與多個手機或電腦同步使用，所有資訊與操作狀態將即時反應在每個裝置上。</li>
-                    <li><strong>專人管理：</strong>為確保設定一致性，建議安排一位設備管理員負責執行所有管理與設定工作。</li>
-                </ul>
-            </div>
+            <h2><span class="icon">🚀</span> 快速認識您的智慧插座</h2>
+            <p>歡迎使用我們的智慧插座！本產品設計旨在提供穩定、便利的遠端設備控制體驗。請參考以下核心功能介紹：</p>
+            <ul>
+                <li><span class="icon">📲</span> <strong>多平台支援：</strong> 可透過手機或電腦瀏覽器，輸入設備 IP 位址或掃描機身 QR Code 輕鬆連線。</li>
+                <li><span class="icon">🔄</span> <strong>即時同步：</strong> 設備狀態（如溫度、開關狀態）會即時同步至所有連線裝置，確保資訊一致。</li>
+                <li><span class="icon">👥</span> <strong>多人共享：</strong> 支援多個使用者同時操作，系統設定（包含密碼）將同步更新至每個裝置。建議指定一位管理員，以利設定管理。</li>
+            </ul>
         </section>
 
-        <!-- 設備初次啟動 -->
         <section id="initial-setup">
-            <h2>首次啟動設定</h2>
+            <h2><span class="icon">🛠️</span> 首次開機設定</h2>
+            <p>首次使用設備時，請根據您購買的版本（WiFi 或乙太網路），依照下列步驟完成網路設定。</p>
             
             <div class="card">
-                <h3 class="card-title">Wi-Fi 版本設定</h3>
+                <div class="card-header">WiFi 版本設定指南</div>
                 <ol>
-                    <li>在瀏覽器輸入網址：<span class="code-block" style="display: inline-block; padding: 2px 8px;">http://192.168.4.1</span></li>
-                    <li>輸入預設密碼：<span class="code-block" style="display: inline-block; padding: 2px 8px;">123456</span></li>
-                    <li>進入主頁面後，點擊「系統設定」進行後續配置。</li>
-                </ol>
-            </div>
-
-            <div class="card">
-                <h3 class="card-title">乙太網路版本設定</h3>
-                <ol>
-                    <li>在瀏覽器輸入網址：<span class="code-block" style="display: inline-block; padding: 2px 8px;">http://smartplug.local</span></li>
-                    <li>輸入預設密碼：<span class="code-block" style="display: inline-block; padding: 2px 8px;">123456</span></li>
-                    <li>進入主頁面後，點擊「系統設定」進行後續配置。</li>
-                </ol>
-            </div>
-        </section>
-
-        <!-- 查找設備 IP -->
-        <section id="find-ip">
-            <h2>如何查找設備的 IP 位址？</h2>
-            <p>當設備連接到您的區域網路後，您可以透過以下方式找到它的 IP 位址，以便進行訪問。</p>
-            
-            <div class="card">
-                <h3 class="card-title">方法一：登入路由器管理介面 (最常用)</h3>
-                <p><strong>1. 進入路由器管理頁面：</strong></p>
-                <p>在瀏覽器輸入您的路由器管理地址，常見地址如下：</p>
-                <div class="code-block">192.168.1.1 (最常見)<br>192.168.0.1<br>router.asus.com (ASUS)<br>tplinkwifi.net (TP-Link)</div>
-                <p><strong>2. 登入帳號密碼：</strong></p>
-                <p>輸入路由器的帳號和密碼。若未修改過，可參考預設值 (如 admin/admin) 或路由器背面的標籤。</p>
-                <p><strong>3. 查找連接設備列表：</strong></p>
-                <p>在管理介面中尋找類似「DHCP 客戶端列表」、「連接設備」或「網路地圖」的選項，即可找到智能插座的 IP 位址。</p>
-            </div>
-
-            <div class="card">
-                <h3 class="card-title">方法二：使用手機 APP 掃描</h3>
-                <p>推薦使用如 <strong>Fing</strong> 等網路掃描工具 App，安裝後開啟即可自動掃描區域網路內的所有設備，並列出其 IP、MAC 位址和設備類型。</p>
-            </div>
-        </section>
-
-        <!-- 主頁面功能 -->
-        <section id="main-interface">
-            <h2>主頁面功能導覽</h2>
-            <div class="card">
-                <ul>
-                    <li><strong>溫度值顯示：</strong>頁面上方將每 2 秒實時更新當前設備偵測到的溫度 (°C)。</li>
-                    <li><strong>連線狀態：</strong>頁面右上角會顯示設備的 WebSocket 連線狀態。</li>
-                    <li><strong>溫度紀錄：</strong>點擊進入溫度紀錄查詢頁面。</li>
-                    <li><strong>系統設定：</strong>點擊進入設備的詳細設定頁面。</li>
-                    <li><strong>登出：</strong>斷開網路連結，安全離開操作介面。</li>
-                    <li><strong>繼電器控制面板：</strong>
+                    <li><strong>設備開機：</strong> 將智慧插座接上電源。</li>
+                    <li><strong>連接熱點：</strong> 開啟手機或電腦的 WiFi，連接至名為 <code>ESP32-C3-Setup</code> 的無線網路，此熱點無需密碼。</li>
+                    <li><strong>進入設定頁面：</strong> 開啟瀏覽器，在網址列輸入 <code>http://192.168.4.1</code>。</li>
+                    <li><strong>網路配置：</strong>
                         <ul>
-                            <li style="padding-left: 20px;"><strong>開關操作：</strong>可個別控制最多 6 個繼電器的開啟與關閉。</li>
-                            <li style="padding-left: 20px;"><strong>滑動操作：</strong>向右滑動開啟，向左滑動關閉，設備將同步執行。</li>
+                            <li>選擇您要連接的 WiFi SSID (名稱)。</li>
+                            <li>輸入該 WiFi 的密碼 (至少8個字元)。</li>
+                            <li><strong>取消勾選</strong> "AP模式"。</li>
+                            <li>點擊 "重新啟動" 按鈕。設備將在3秒後重啟並自動連接您指定的 WiFi。</li>
                         </ul>
                     </li>
-                </ul>
+                    <li><strong>登入設備：</strong>
+                        <ul>
+                            <li>設備重啟後，您的手機/電腦請選擇設定的 WiFi 網路。</li>
+                            <li>在瀏覽器輸入 <code>http://smartplug.local</code> 進入登錄頁面。</li>
+                            <li>輸入預設密碼 <code>123456</code> 即可登入操作主頁面。</li>
+                        </ul>
+                    </li>
+                </ol>
+                <div class="note">
+                    <p><strong>特別注意：</strong> </p>
+                    <p>初次設定時，設備會以 AP 模式啟動，連接熱點後請稍待些時刻，讓設備完成服務啟動</p>
+                    <p>瀏覽器輸入登錄IP進入登錄頁面後，會自動掃描可連網的WIFI訊號源 </p>
+                    <p>若WIFI 密碼輸入錯誤，設備重啟動後仍會以WIFI AP模式執行進入登錄頁面</p>
+                    <p>WIFI AP模式仍可進入操作主頁面，亦不影響各種操作，唯無法取得精準的時間，網路的穩定性較差 </p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">乙太網路版本設定指南</div>
+                 <ol>
+                    <li><strong>連接與開機：</strong> 將網路線與電源線連接至智慧插座，並等待設備完成啟動。</li>
+                    <li><strong>進入登錄頁面：</strong> 在已連接到相同區域網路的手機或電腦上，開啟瀏覽器並輸入 <code>http://smartplug.local</code>。</li>
+                    <li><strong>登入設備：</strong> 輸入預設密碼 <code>123456</code>，即可進入操作主頁面。</li>
+                </ol>
             </div>
         </section>
 
-        <!-- 系統設定 -->
-        <section id="system-settings">
-            <h2>系統設定詳解</h2>
+        <section id="find-ip">
+            <h2><span class="icon">🌐</span> 如何找到設備的 IP 位址</h2>
+            <p>當 <code>http://smartplug.local</code> 無法使用時，您可以透過以下方法找到設備的 IP 位址，以便直接存取。</p>
+            
+            <h3>方法一：登入路由器管理介面 (最常用)</h3>
+            <ol>
+                <li><strong>進入管理頁面：</strong> 在瀏覽器輸入您的路由器管理 IP，常見位址如 <code>192.168.1.1</code>、<code>192.168.0.1</code> 或 <code>router.asus.com</code> (ASUS)、<code>tplinkwifi.net</code> (TP-Link)。</li>
+                <li><strong>登入路由器：</strong> 輸入路由器的管理員帳號密碼。</li>
+                <li><strong>查找設備列表：</strong> 在管理介面中尋找「DHCP 客戶端列表」、「連接設備」或類似選項，找到您的智慧插座，即可看到其被分配的 IP 位址。</li>
+            </ol>
+
+            <h3>方法二：使用電腦命令查詢</h3>
+            <p>您可以在與插座同一個網路下的電腦執行指令來掃描網域內的設備。</p>
+            <ul>
+                <li><strong>Windows / macOS / Linux:</strong> 打開命令提示字元或終端機，輸入 <code>arp -a</code> 來查看 ARP 快取表。</li>
+                <li><strong>進階掃描 (需安裝 nmap):</strong> 輸入 <code>nmap -sn 192.168.1.0/24</code> (請依據您的網段修改 IP)。</li>
+            </ul>
+
+            <h3>方法三：使用手機 APP</h3>
+            <p>下載如 <strong>Fing</strong> 等網路掃描工具 App，開啟後即可自動掃描區域網路內的所有設備及其 IP 位址。</p>
+        </section>
+
+        <section id="operation">
+            <h2><span class="icon">🎛️</span> 設備操作介面詳解</h2>
+            <ul>
+                <li><strong>溫度值顯示：</strong> 頁面頂端會每 2 秒更新一次設備當前的溫度讀數 (°C)。</li>
+                <li><strong>連線狀態：</strong> 頁面右上角顯示 WebSocket 連線狀態，確保您的操作能夠即時同步。</li>
+                <li><strong>繼電器控制面板：</strong>
+                    <ul>
+                        <li><strong>開關操作：</strong> 左右滑動開關，可獨立控制 6 個繼電器的開啟與關閉。</li>
+                        <li><strong>點動測試：</strong> 點擊開關，繼電器將自動「開啟1秒 → 關閉」，可用於測試功能。</li>
+                        <li><strong>修改名稱：</strong> 點擊名稱區域，可自訂每個繼電器的名稱，方便辨識。</li>
+                    </ul>
+                </li>
+                <li><strong>功能選單：</strong> 提供「溫度紀錄」、「系統設定」與「登出」等快速連結。</li>
+            </ul>
+        </section>
+
+        <section id="settings">
+            <h2><span class="icon">⚙️</span> 系統設定說明</h2>
+            <p>在此頁面，您可以自訂設備名稱、更改密碼，並進行詳細的網路設定。</p>
+            <h3>輸入資料規格</h3>
+            <ul>
+                <li><strong>機櫃名稱：</strong> 0-10 字元，支援中英文。</li>
+                <li><strong>設備密碼：</strong> 6-20 字元，支援英文字母與數字。</li>
+                <li><strong>WIFI SSID：</strong> 1-32 字元，英文字。</li>
+                <li><strong>WIFI 密碼：</strong> 8-64 字元，支援英文字母與數字。</li>
+            </ul>
+
+            <h3>WiFi 版本設定</h3>
+            <p>在 WiFi 版本中，網路相關資訊主要為顯示用途，讓您確認設備當前的連線狀態。這些欄位皆不可編輯，若需更換網路，請重新進行首次開機設定流程。</p>
+            <ul>
+                <li><strong>WIFI SSID / 密碼：</strong> 顯示目前連線的 WiFi 名稱與密碼。</li>
+                <li><strong>WIFI 連線模式：</strong> 顯示當前的 WiFi 連線模式 (AP模式 or STA 模式)。</li>
+                <li><strong>設備IP 位址：</strong> 顯示設備當前獲取的 IP 位址與連線狀態。</li>
+                <li><strong>WIFI 連線狀態：</strong> 顯示設備當前WIFI連線狀態。</li>
+            </ul>
+
+            <h3>乙太網路版設定</h3>
+            <ul>
+                <li><strong>DHCP (預設)：</strong> 勾選此項，設備將自動從路由器獲取 IP 位址。</li>
+                <li><strong>靜態 IP：</strong> 取消勾選 DHCP，可手動設定 LAN IP、Gate Way、Net Mask 等資訊。請確保資料正確，否則可能導致設備離線。</li>
+            </ul>
+
             <div class="note">
-                <strong>重要提示：</strong>所有設定修改後，請務必點擊「儲存設定」按鈕，設定值將在設備下次重啟後生效。
-            </div>
-
-            <div class="card">
-                <h3 class="card-title">輸入資料規格</h3>
-                <ul>
-                    <li><strong>機櫃名稱：</strong>0-10 字元，支援中英文。</li>
-                    <li><strong>設備密碼：</strong>6-20 字元，支援英文字母與數字。</li>
-                    <li><strong>Wi-Fi SSID：</strong>4-32 字元，僅支援英文字母。</li>
-                    <li><strong>Wi-Fi 密碼：</strong>8-64 字元，支援英文字母與數字。</li>
-                </ul>
-            </div>
-
-            <div class="card">
-                <h3 class="card-title">功能選項說明</h3>
-                <ul>
-                    <li><strong>儲存設定：</strong>將當前頁面的所有設定儲存至設備記憶體中。</li>
-                    <li><strong>回復原廠設定：</strong>將所有設定還原至出廠預設值（登入密碼將重設為 123456）。</li>
-                    <li><strong>重新啟動：</strong>設備將在 3 秒後重新啟動。</li>
-                </ul>
+                <p><strong>重要提醒：</strong> </p>
+                <p>任何設定更改後，都必須點擊 <strong>"儲存設定"</strong> 按鈕才會生效。</p>
+                <p>若要還原所有設定，請點擊 <strong>"回復原廠設定"</strong>，設備密碼將重設為 <code>123456</code></p>
+                <p>點擊 <strong>“重新啟動”</strong>：3秒後設備會重新啟動</p>
             </div>
         </section>
 
-        <!-- 溫度記錄 -->
         <section id="temperature-log">
-            <h2>溫度記錄功能</h2>
-            <div class="card">
-                <h3 class="card-title">記錄規則</h3>
-                <ul>
-                    <li>設備啟動後，每 30 分鐘會自動記錄一筆溫度資料。</li>
-                    <li>每日的紀錄會儲存在對應的檔案中 (例如週一的紀錄在 monday.txt)。</li>
-                    <li>系統會自動循環覆蓋紀錄：例如，下週一的紀錄將會覆蓋本週一的紀錄。</li>
-                </ul>
-            </div>
-            <div class="card">
-                <h3 class="card-title">查閱與下載</h3>
-                <ul>
-                    <li><strong>檔案選擇：</strong>可透過下拉選單選擇欲查看的日期檔案 (sunday.txt ~ saturday.txt)。</li>
-                    <li><strong>檔案下載：</strong>選擇檔案後，可將其下載至您的裝置中。</li>
-                    <li><strong>即時顯示：</strong>頁面會直接顯示當日的溫度記錄，格式為「西元年/月/日 時:分:秒 溫度值(°C)」。</li>
-                </ul>
-            </div>
+            <h2><span class="icon">🌡️</span> 溫度記錄功能</h2>
+            <p>本設備會自動記錄溫度變化，方便您追蹤歷史數據。</p>
+            <ul>
+                <li><strong>記錄規則：</strong> 設備啟動後，每 30 分鐘記錄一次當前溫度。</li>
+                <li><strong>檔案儲存：</strong> 每天的記錄會儲存在一個獨立檔案中，例如週一的數據在 <code>monday.txt</code>。系統會循環覆蓋記錄，例如下週一的數據會覆蓋本週一的數據。</li>
+                <li><strong>下載與查看：</strong>
+                    <ol>
+                        <li>從下拉選單中選擇您想查看的日期檔案 (例如 <code>monday.txt</code>)。</li>
+                        <li>點擊下載，檔案將儲存至您的裝置。</li>
+                        <li>頁面下方視窗也會同步顯示當日的溫度記錄。</li>
+                    </ol>
+                </li>
+            </ul>
         </section>
 
+        <footer>
+            <p>&copy; 2025 智慧插座產品團隊</p>
+        </footer>
     </div>
 
 </body>
