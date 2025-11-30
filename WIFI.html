@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartPlug WiFi 版本設定指南</title>
+    <style>
+        :root {
+            --primary-blue: #4A90E2; /* 明亮的科技藍 */
+            --secondary-blue: #E1F5FE; /* 極淺藍背景 */
+            --dark-text: #2C3E50;
+            --light-text: #546E7A;
+            --white: #FFFFFF;
+            --accent-warning: #FF9800; /* 警告色 */
+            --accent-danger: #E53935; /* 危險/重要提示色 */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Noto Sans TC", "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #F5F7FA;
+            color: var(--dark-text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Header Design */
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            color: var(--primary-blue);
+            margin-bottom: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        header p {
+            color: var(--light-text);
+            font-size: 1.1rem;
+        }
+
+        /* Card Layout */
+        .card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 35px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 1.4rem;
+            color: var(--dark-text);
+            border-left: 5px solid var(--primary-blue);
+            padding-left: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            color: var(--primary-blue);
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        p {
+            color: var(--light-text);
+            margin-bottom: 15px;
+        }
+
+        ul, ol {
+            padding-left: 20px;
+            color: var(--light-text);
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* Utility Boxes */
+        .info-box, .warning-box, .danger-box {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 0.95rem;
+        }
+
+        .info-box {
+            background-color: var(--secondary-blue);
+            color: #0277BD;
+            border-left: 4px solid #0277BD;
+        }
+
+        .warning-box {
+            background-color: #FFF3E0;
+            color: #EF6C00;
+            border-left: 4px solid #EF6C00;
+        }
+
+        .danger-box {
+            background-color: #FFEBEE;
+            color: #C62828;
+            border-left: 4px solid #C62828;
+        }
+
+        .code {
+            font-family: Consolas, monospace;
+            background: #eee;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #D81B60;
+            font-weight: bold;
+        }
+
+        /* Image Handling */
+        .img-wrapper {
+            text-align: center;
+            margin: 25px 0;
+        }
+
+        .img-wrapper img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid #E0E0E0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .caption {
+            display: block;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #90A4AE;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            color: #B0BEC5;
+            font-size: 0.9rem;
+            padding-bottom: 20px;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container { padding: 20px 15px; }
+            .card { padding: 25px; }
+            h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>SmartPlug 設定指南</h1>
+        <p>WiFi 版本 | 快速安裝與連線手冊</p>
+    </header>
+
+    <!-- Step 1: Connect to Hotspot -->
+    <section class="card">
+        <h2>1. 連接設備熱點</h2>
+        <p>初次設定時，我們需要先讓手機直接連接到插座發出的訊號。</p>
+        <ol>
+            <li>開啟手機或電腦的 WiFi 設定介面。</li>
+            <li>尋找並連接至名稱為 <span class="code">ESP32-C3-Setup</span> 的無線網路。</li>
+            <li>此熱點<strong>無需密碼</strong>，直接點擊連接即可。</li>
+        </ol>
+        <div class="img-wrapper">
+            <img src="./img/image-3.png" alt="WiFi 連接示意圖">
+            <span class="caption">圖 1：手機 WiFi 列表，連接至設備熱點</span>
+        </div>
+    </section>
+
+    <!-- Step 2: Access Config Page -->
+    <section class="card">
+        <h2>2. 進入設定頁面</h2>
+        <p>連接成功後，請開啟網頁瀏覽器（如 Chrome, Safari）。</p>
+        <ul>
+            <li>在網址列輸入：<span class="code">http://192.168.4.1</span></li>
+            <li>您將會看到如下圖的設定介面：</li>
+        </ul>
+
+        <div class="img-wrapper">
+            <img src="./img/image-4.png" alt="瀏覽器設定頁面">
+            <span class="caption">圖 2：設備初始設定畫面</span>
+        </div>
+
+        <div class="warning-box">
+            <strong>⚠️ 關鍵設定說明：</strong>
+            <ul>
+                <li><strong>WiFi SSID：</strong>請選擇您家中的 WiFi 名稱（例：MY_HOME）。<br>
+                    <span style="color: #D32F2F;">注意：僅支援 2.4G 網路，請勿選擇 5G 頻段的 WiFi。</span>
+                </li>
+                <li><strong>WiFi 密碼：</strong>請輸入您家中 WiFi 的連線密碼。</li>
+                <li><strong>AP 模式：</strong>請務必<strong>取消勾選</strong>「啟用熱點模式 (AP Mode)」。</li>
+                <li><strong>設備登錄密碼：</strong>預設出廠值為 <span class="code">123456</span>。</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- Step 3: Finalize Setup -->
+    <section class="card">
+        <h2>3. 完成設定與重啟</h2>
+        <p>確認上述資訊無誤後，請按下頁面下方的按鈕進行登入或儲存。</p>
+        
+        <div class="info-box">
+            <strong>💡 關於 AP 熱點的變化：</strong><br>
+            一旦您取消了「AP 熱點模式」並儲存，手機將再也搜尋不到 <span class="code">ESP32-C3-Setup</span> 這個訊號，這是正常現象，代表設備已準備切換到您的家用網路。
+        </div>
+
+        <div class="img-wrapper">
+            <img src="./img/image-5.png" alt="取消 AP 模式示意圖">
+            <span class="caption">圖 3：務必取消勾選 AP Mode，並確認 WiFi 資訊正確</span>
+        </div>
+
+        <h3>執行電源重啟循環</h3>
+        <p>設定完成後，請依照以下步驟讓系統更新：</p>
+        <ol>
+            <li>在網頁介面點擊<strong>「登出」</strong>。</li>
+            <li>將智慧插座<strong>拔除電源</strong>，等待約 3 秒後重新插上。</li>
+            <li>等待設備啟動完成。</li>
+            <li>將您的手機 WiFi 重新連回原本的家中網路（例：MY_HOME 2.4G）。</li>
+        </ol>
+    </section>
+
+    <!-- Step 4: Daily Usage -->
+    <section class="card">
+        <h2>4. 日常操作方式</h2>
+        <p>完成上述 1~3 步驟後，即完成初始設定。</p>
+        <p>日後要控制插座時，只需確保手機或電腦與插座連接在同一個 WiFi 網路下，開啟瀏覽器輸入以下網址即可進入控制台：</p>
+        <p style="text-align: center; font-size: 1.2rem; font-weight: bold; color: var(--primary-blue); margin: 20px 0;">
+            http://smartplug.local
+        </p>
+    </section>
+
+    <!-- Step 5: Advanced & Reset -->
+    <section class="card">
+        <h2>5. 系統狀態與故障排除</h2>
+        
+        <h3>系統狀態 (STA 模式)</h3>
+        <p>進入系統設定後，您會看到連線模式已變更為 <span class="code">STA</span>，且 IP 位址變為固定。<strong>請勿隨意修改這兩項參數</strong>。</p>
+        
+        <div class="img-wrapper">
+            <img src="./img/image-6.png" alt="系統狀態頁面">
+            <span class="caption">圖 4：系統進入 STA 模式，IP 已固定</span>
+        </div>
+
+        <h3>修改設定與儲存</h3>
+        <p>若您日後修改了「機櫃名稱」或「密碼設定」，請務必點擊<strong>「儲存設定」</strong>按鈕。系統顯示「設定已成功儲存」才算完成。</p>
+
+        <div class="danger-box">
+            <strong>🔄 忘記密碼怎麼辦？(恢復出廠設定)</strong><br>
+            如果您忘記了修改過的「登入密碼」，導致無法進入管理頁面：
+            <br><br>
+            請長按設備上的 <strong>Reset 鍵 3 秒鐘</strong>。
+            <br>
+            設備將會恢復出廠值，屆時請從步驟 1 開始重新設定即可。
+        </div>
+
+        <div class="img-wrapper">
+            <img src="./img/image-7.png" alt="功能按鈕示意圖">
+            <span class="caption">圖 5：儲存設定與回復出廠設定按鈕</span>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; SmartPlug 智能家居系統 | WiFi 版使用說明書 V1.0</p>
+    </footer>
+</div>
+
+</body>
+</html>

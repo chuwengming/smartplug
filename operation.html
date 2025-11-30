@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能插座操作手冊 | SmartPlug User Manual</title>
+    <style>
+        :root {
+            --primary-blue: #4A90E2;
+            --secondary-blue: #E3F2FD;
+            --dark-text: #37474F;
+            --light-text: #607D8B;
+            --white: #FFFFFF;
+            --bg-color: #F7F9FC;
+            --border-color: #E0E0E0;
+            --warning-bg: #FFF3E0;
+            --warning-text: #E65100;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Noto Sans TC", "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--dark-text);
+            line-height: 1.7;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--secondary-blue);
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            color: var(--primary-blue);
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--light-text);
+            font-size: 1rem;
+        }
+
+        /* Card Layout */
+        .card {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+            border: 1px solid var(--border-color);
+        }
+
+        h2 {
+            font-size: 1.4rem;
+            color: var(--dark-text);
+            border-left: 5px solid var(--primary-blue);
+            padding-left: 15px;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+
+        h3 {
+            font-size: 1.15rem;
+            color: var(--primary-blue);
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+        
+        h3::before {
+            content: '🔹';
+            font-size: 0.8em;
+            margin-right: 8px;
+        }
+
+        p {
+            color: var(--light-text);
+            margin-bottom: 15px;
+        }
+
+        ul, ol {
+            padding-left: 20px;
+            color: var(--light-text);
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        /* Feature Grid */
+        .grid-box {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .feature-item {
+            background: var(--secondary-blue);
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .feature-item strong {
+            display: block;
+            color: var(--primary-blue);
+            margin-bottom: 8px;
+        }
+
+        /* Spec Table style */
+        .spec-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+        }
+
+        .spec-table th, .spec-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+        }
+
+        .spec-table th {
+            color: var(--primary-blue);
+            width: 40%;
+            background-color: #FAFAFA;
+        }
+
+        .spec-table td {
+            color: var(--light-text);
+            font-family: Consolas, monospace;
+        }
+
+        /* Warning / Info Boxes */
+        .note-box {
+            background-color: var(--secondary-blue);
+            color: #0277BD;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.95rem;
+        }
+
+        .warning-box {
+            background-color: var(--warning-bg);
+            color: var(--warning-text);
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.95rem;
+            border-left: 4px solid var(--warning-text);
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        
+        .tag-wifi { background: #E1F5FE; color: #0288D1; }
+        .tag-eth { background: #E0F2F1; color: #00897B; }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            color: #B0BEC5;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 600px) {
+            .card { padding: 25px; }
+            h1 { font-size: 1.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>智能插座操作手冊</h1>
+        <p>全方位智慧控制系統 | 溫度監控 | 遠端管理</p>
+    </header>
+
+    <!-- Section 1: Introduction -->
+    <section class="card">
+        <h2>1. 產品特色與連線簡介</h2>
+        <p>歡迎使用智能插座，本設備支援多平台同步操作，建議安排一位<strong>設備管理員</strong>負責執行設定工作。</p>
+        
+        <div class="grid-box">
+            <div class="feature-item">
+                <strong>📲 多裝置即時同步</strong>
+                無論是溫度資訊、繼電器開關狀態，或系統設定更改（含密碼），所有連線的手機或電腦都會即時同步更新。
+            </div>
+            <div class="feature-item">
+                <strong>🌐 彈性連線方式</strong>
+                支援 QR Code 掃描進入說明頁面，或透過乙太網路/WiFi 連接。啟動後於瀏覽器輸入 IP 即可開始控制。
+            </div>
+            <div class="feature-item">
+                <strong>🌡️ 實時溫度監控</strong>
+                頁面右上方顯示 WebSocket 連線狀態，並每 2 秒自動更新最新的溫度數值。
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 2: Operation Interface -->
+    <section class="card">
+        <h2>2. 主操作頁面說明</h2>
+        <p>登入設備後，您將看到直覺的控制面板，主要包含以下功能區域：</p>
+
+        <h3>控制面板功能</h3>
+        <ul>
+            <li><strong>繼電器控制：</strong> 頁面可個別控制 6 個繼電器的開/關。</li>
+            <li><strong>撥動開關：</strong> 向右滑動「開啟」，向左滑動「關閉」。設備會同步執行動作。</li>
+            <li><strong>點動模式 (Jog)：</strong> 用於測試功能。開啟後會執行「開啟 1 秒 ➝ 自動關閉」的循環動作。</li>
+            <li><strong>修改名稱：</strong> 點擊修改可自訂繼電器名稱，重啟後設定依然保留。</li>
+        </ul>
+
+        <h3>功能導覽列</h3>
+        <ul>
+            <li><strong>溫度紀錄：</strong> 進入歷史溫度查詢頁面。</li>
+            <li><strong>系統設定：</strong> 進入進階參數設定頁面。</li>
+            <li><strong>登出：</strong> 斷開網路連結，安全離開操作介面。</li>
+        </ul>
+    </section>
+
+    <!-- Section 3: System Settings -->
+    <section class="card">
+        <h2>3. 系統設定與參數規格</h2>
+        <p>在此頁面，您可以修改設備名稱、密碼及網路參數。請務必按下<strong>「儲存設定」</strong>才能生效。</p>
+
+        <h3>輸入資料規格限制</h3>
+        <table class="spec-table">
+            <tr>
+                <th>欄位名稱</th>
+                <th>輸入範圍 / 限制</th>
+            </tr>
+            <tr>
+                <td>機櫃名稱</td>
+                <td>0 - 10 字元 (中英文皆可)</td>
+            </tr>
+            <tr>
+                <td>設備登錄密碼</td>
+                <td>6 - 20 字元 (英文字母、數字)</td>
+            </tr>
+            <tr>
+                <td>WiFi SSID</td>
+                <td>1 - 32 字元 (英文字母)</td>
+            </tr>
+            <tr>
+                <td>WiFi 密碼</td>
+                <td>8 - 64 字元 (英文字母、數字)</td>
+            </tr>
+        </table>
+
+        <h3>網路版本設定差異</h3>
+        <div class="grid-box">
+            <div class="feature-item" style="background: #F1F8E9;">
+                <span class="tag tag-eth">乙太網路版 (Ethernet)</span>
+                <p style="font-size: 0.9rem; margin-top: 10px;">
+                    <strong>DHCP 設定 (關鍵)：</strong><br>
+                    ✅ <strong>勾選：</strong> 自動取得動態 IP (預設)。<br>
+                    ⬜ <strong>取消勾選：</strong> 使用靜態 IP。此時可手動修改 LAN IP、Gateway 等資訊。<br><br>
+                    <em>注意：若要更改 IP，必須先取消 DHCP。</em>
+                </p>
+            </div>
+            <div class="feature-item" style="background: #E3F2FD;">
+                <span class="tag tag-wifi">WiFi 版</span>
+                <p style="font-size: 0.9rem; margin-top: 10px;">
+                    <strong>自動偵測顯示：</strong><br>
+                    SSID、WiFi 密碼、IP 位址及連線狀態皆為自動顯示，<strong>不可編輯</strong>。<br>
+                    AP 模式狀態會顯示在 Checkbox 中 (AP 或 STA)。
+                </p>
+            </div>
+        </div>
+
+        <div class="warning-box">
+            <strong>⚠️ 重要操作提醒：</strong>
+            <ul>
+                <li><strong>儲存設定：</strong> 更改任何資訊後，必須點擊「儲存設定」，並等待系統確認。</li>
+                <li><strong>重新啟動：</strong> 按下後約 3 秒重新進入 Login 頁面。</li>
+                <li><strong>回復原廠設定：</strong> 所有設定將還原，預設密碼為 <code>123456</code>。</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- Section 4: Temperature Records -->
+    <section class="card">
+        <h2>4. 溫度紀錄管理</h2>
+        <p>系統會自動記錄運作期間的溫度變化，並以檔案形式儲存。</p>
+
+        <h3>紀錄規則</h3>
+        <ul>
+            <li><strong>頻率：</strong> 設備啟動後，每 30 分鐘自動寫入一條紀錄。</li>
+            <li><strong>循環機制：</strong> 採「週循環」覆蓋。例如：下週一的紀錄會自動覆蓋本週一的 <code>monday.txt</code> 檔案。</li>
+            <li><strong>檔案格式：</strong> 共有 7 個檔案 (sunday.txt ~ saturday.txt)。</li>
+        </ul>
+
+        <h3>下載與查看</h3>
+        <ol>
+            <li>從下拉選單選擇欲查詢的日期檔案 (如 monday.txt)。</li>
+            <li>點擊<strong>「下載檔案」</strong>。</li>
+            <li>系統會將檔案儲存至您裝置的預設下載資料夾。</li>
+            <li>開啟檔案即可查看格式為 <code>西元年/月/日 時:分:秒 溫度值(°C)</code> 的數據。</li>
+        </ol>
+        <div class="note-box">
+            若該日尚未有紀錄檔案，系統會跳出提示視窗告知。
+        </div>
+    </section>
+
+    <!-- Section 5: Troubleshooting -->
+    <section class="card">
+        <h2>5. 故障排除與回復原廠</h2>
+        <p>若您忘記登入密碼，或設定了錯誤的靜態 IP 導致無法連線，請依以下方式重置：</p>
+
+        <h3>情境一：忘記密碼或 IP (硬體重置)</h3>
+        <ol>
+            <li>找到設備上的實體 <strong>Reset 按鍵</strong>。</li>
+            <li>持續按壓 <strong>3 秒鐘</strong>。</li>
+            <li>設備將自動重啟，並回復至出廠預設值。</li>
+            <li>重啟後請參考「初次啟動操作」重新設定。</li>
+        </ol>
+
+        <h3>情境二：一般重置 (軟體重置)</h3>
+        <ul>
+            <li>若尚可登入，請直接進入「系統設定」頁面。</li>
+            <li>點擊頁面下方的<strong>「回復原廠設定」</strong>按鈕即可。</li>
+        </ul>
+    </section>
+
+    <footer>
+        <p>&copy; SmartPlug 智能插座 | 操作手冊 V2.0</p>
+    </footer>
+</div>
+
+</body>
+</html>
