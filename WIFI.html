@@ -185,10 +185,10 @@
     <!-- Step 1: Connect to Hotspot -->
     <section class="card">
         <h2>1. 連接設備熱點</h2>
-        <p>初次設定時，我們需要先讓手機直接連接到插座發出的訊號。</p>
+        <p>初次設定時，先讓手機WIFI網路設定連接到插座的熱點訊號：</p>
         <ol>
             <li>開啟手機或電腦的 WiFi 設定介面。</li>
-            <li>尋找並連接至名稱為 <span class="code">ESP32-C3-Setup</span> 的無線網路。</li>
+            <li>尋找並連接至名稱為 <span class="code">ESP32-C3-Setup</span> 的WIFI網路。</li>
             <li>此熱點<strong>無需密碼</strong>，直接點擊連接即可。</li>
         </ol>
         <div class="img-wrapper">
@@ -218,7 +218,7 @@
                     <span style="color: #D32F2F;">注意：僅支援 2.4G 網路，請勿選擇 5G 頻段的 WiFi。</span>
                 </li>
                 <li><strong>WiFi 密碼：</strong>請輸入您家中 WiFi 的連線密碼。</li>
-                <li><strong>AP 模式：</strong>請務必<strong>取消勾選</strong>「啟用熱點模式 (AP Mode)」。</li>
+                <li><strong>AP 模式：</strong>請<strong>取消勾選</strong>「啟用熱點模式 (AP Mode)」。</li>
                 <li><strong>設備登錄密碼：</strong>預設出廠值為 <span class="code">123456</span>。</li>
             </ul>
         </div>
@@ -227,25 +227,24 @@
     <!-- Step 3: Finalize Setup -->
     <section class="card">
         <h2>3. 完成設定與重啟</h2>
-        <p>確認上述資訊無誤後，請按下頁面下方的按鈕進行登入或儲存。</p>
+        <p>確認上述資訊無誤後，點擊下方的<strong>登入</strong>按鍵，進入操作頁面</p>
         
         <div class="info-box">
-            <strong>💡 關於 AP 熱點的變化：</strong><br>
-            一旦您取消了「AP 熱點模式」並儲存，手機將再也搜尋不到 <span class="code">ESP32-C3-Setup</span> 這個訊號，這是正常現象，代表設備已準備切換到您的家用網路。
+            <strong>💡 關於插座 AP 熱點的說明：</strong><br>
+            一旦您取消了「AP 熱點模式」，手機WIFI網路將無法找到 <span class="code">ESP32-C3-Setup</span> 這個WIFI熱點，此時需選擇切換到您的家用WIFI網路。
         </div>
 
         <div class="img-wrapper">
             <img src="./img/image-5.png" alt="取消 AP 模式示意圖">
-            <span class="caption">圖 3：務必取消勾選 AP Mode，並確認 WiFi 資訊正確</span>
+            <span class="caption">圖 3：取消勾選 AP Mode，方能取用家用的 WiFi 網路</span>
         </div>
 
-        <h3>執行電源重啟循環</h3>
-        <p>設定完成後，請依照以下步驟讓系統更新：</p>
+        <h3>設定完畢執行<strong>重新啟動</strong>：</h3>
         <ol>
-            <li>在網頁介面點擊<strong>「登出」</strong>。</li>
-            <li>將智慧插座<strong>拔除電源</strong>，等待約 3 秒後重新插上。</li>
+            <li>若取消勾選AP Mode，網頁會跳出提示框：<br>'WIFI連線後，瀏覽器位址列輸入"http://smartplug.local" ，重新進入登錄頁面'</li>
             <li>等待設備啟動完成。</li>
             <li>將您的手機 WiFi 重新連回原本的家中網路（例：MY_HOME 2.4G）。</li>
+            <li>若<strong>未取消勾選AP Mode</strong>，網頁會跳出提示框：<br>1. WIFI連網選擇 "ESP32-C3-Setup"(無須輸入密碼)<br>2. WIFI連線後，瀏覽器位址列輸入"192.168.4.1" ，重新進入登錄頁面'<br>表示爾後仍會以初始啟動模式啟動</li>
         </ol>
     </section>
 
@@ -264,21 +263,21 @@
         <h2>5. 系統狀態與故障排除</h2>
         
         <h3>系統狀態 (STA 模式)</h3>
-        <p>進入系統設定後，您會看到連線模式已變更為 <span class="code">STA</span>，且 IP 位址變為固定。<strong>請勿隨意修改這兩項參數</strong>。</p>
+        <p>進入操作頁面中的"系統設定"後，您會看到連線模式已變更為 <span class="code">STA</span>，且會顯示連線的 IP 位址。</p>
         
         <div class="img-wrapper">
             <img src="./img/image-6.png" alt="系統狀態頁面">
-            <span class="caption">圖 4：系統進入 STA 模式，IP 已固定</span>
+            <span class="caption">圖 4：系統進入 STA 模式，顯示連線的 IP</span>
         </div>
 
         <h3>修改設定與儲存</h3>
-        <p>若您日後修改了「機櫃名稱」或「密碼設定」，請務必點擊<strong>「儲存設定」</strong>按鈕。系統顯示「設定已成功儲存」才算完成。</p>
+        <p>系統設定頁面的「機櫃名稱」及「密碼設定」可自行修改，修改後務必執行<strong>「儲存設定」</strong>且系統顯示「設定已成功儲存」方能生效。</p>
 
         <div class="danger-box">
             <strong>🔄 忘記密碼怎麼辦？(恢復出廠設定)</strong><br>
-            如果您忘記了修改過的「登入密碼」，導致無法進入管理頁面：
+            如果您忘記了修改過的「登入密碼」，導致無法進入操作頁面：
             <br><br>
-            請長按設備上的 <strong>Reset 鍵 3 秒鐘</strong>。
+            請長按插座設備上的 <strong>Reset 鍵 3 秒鐘</strong>。
             <br>
             設備將會恢復出廠值，屆時請從步驟 1 開始重新設定即可。
         </div>

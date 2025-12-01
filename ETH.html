@@ -208,48 +208,47 @@
         <!-- Section 3: Configuration -->
         <section class="card">
             <h2>3. 網路參數設定 (IP 配置)</h2>
-            <p>若您需要更改設備的 IP 位址，請務必遵循以下關鍵步驟，以免造成連線中斷。</p>
+            <p>若改用固定IP登錄設備，請先點擊操作頁面中"系統設定"按鍵，務必遵循下列關鍵步驟：</p>
 
             <h3>步驟 A：取消 DHCP 功能</h3>
-            <p>在更改 IP 欄位之前，您<strong>必須</strong>先取消勾選 <span class="code-snippet">DHCP</span> (啟用動態 IP) 選項。</p>
+            <p>您<strong>必須</strong>先取消勾選 <span class="code-snippet">DHCP</span> (啟用動態 IP) 選項，參考下圖：</p>
             
             <div class="img-container">
                      <img src="./img/image-1.png" alt="設定介面示意圖 - 取消 DHCP">
-                <span class="caption">圖示：更改 IP 前，請務必先將「啟用動態 IP (DHCP)」取消勾選</span>
+                <span class="caption">圖示：使用固定IP登錄，須將「啟用動態 IP (DHCP)」取消勾選</span>
             </div>
 
             <h3>步驟 B：儲存設定</h3>
-            <p>完成任何更改後，請務必點擊<strong>「儲存設定」</strong>按鈕。</p>
-            <ul>
-                <li>系統會顯示「設定已成功儲存」訊息，此時才代表設定真正寫入完成。</li>
-            </ul>
+            <p>完成任何更改後，請務必點擊<strong>「儲存設定」</strong>按鈕，系統會顯示<strong>「設定已成功儲存」</strong>訊息，此時才代表設定真正寫入完成。</p>
         </section>
 
         <!-- Section 4: Reboot & Warnings -->
         <section class="card">
             <h2>4. 重啟與注意事項</h2>
-            <p>設定完成後，關於「重新啟動」功能有重要的操作規範。</p>
+            <p>設定完成後，關於「重新啟動」功能有重要的操作規範：</p>
 
             <h3>重新啟動的操作</h3>
-            <p>一般情況下，按下<strong>「重新啟動」</strong>按鍵後，約等待 10 秒鐘左右，系統會自動跳轉回 Login 登入畫面。</p>
+            <p>一般情況下，按下<strong>「重新啟動」</strong>按鍵後，約等待 10 秒鐘左右，瀏覽器會跳出視窗做下列說明：</p>
 
             <div class="warning-box">
-                <strong>⚠️ 重要警告：若您修改了 IP 位址</strong><br>
-                如果您剛剛修改了 IP 位址，<strong>請勿點擊</strong>「重新啟動」按鍵。<br>
-                因為 IP 已變更，網頁將無法自動導向回原本的登入畫面 (Login)。請手動在瀏覽器輸入新的 IP 位址進行連線。
+                <strong>⚠️ 重要訊息提醒：</strong><br>
+                若您剛剛修改了IP位址，也取消DHCP勾選，「重新啟動」後：<br>
+                1. 系統改採靜態IP登錄，無法再使用http://smartplug.local登錄<br>
+                2. 需在瀏覽器位址列<strong>手動</strong>輸入新設定的IP，才能夠重新進入登錄頁面<br>
+                3. 若無必要，請不要隨意更改Gat Way, Net Mask, DNS的設定值
             </div>
 
             <div class="img-container">
                  <img src="./img/image-2.png" alt="設定介面示意圖 - 重啟警告">
-                <span class="caption">圖示：若修改 IP，請勿使用此處的重新啟動功能</span>
+                <span class="caption">圖示：若修改IP，請手動輸入IP重新進入登錄頁面</span>
             </div>
         </section>
 
         <!-- Section 5: Troubleshooting -->
         <section class="card">
             <h2>5. 故障排除</h2>
-            <p>如果不小心忘記了修改後的 IP 位址，或設定發生錯誤導致無法連線：</p>
-            <p>請長按或點擊設備上的<strong>「回復出廠設定」</strong>(Restore Factory Settings) 按鈕。此操作將會把所有的更改全部還原為出廠預設值。</p>
+            <p>萬一忘記了修改後的IP位址或修改過的登錄密碼，重新啟動後會無法連線：</p>
+            <p>此時請長按設備上的<strong>「回復出廠設定」</strong>(Restore Factory Settings) 按鈕3秒，將會把所有的設定值還原為出廠預設值(包括登錄密碼)。</p>
         </section>
     </main>
 
