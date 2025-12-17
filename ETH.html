@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartPlug 智慧插座設定指南</title>
+    <style>
+        :root {
+            --primary-blue: #5B86E5;
+            --secondary-blue: #36D1DC;
+            --text-dark: #333333;
+            --text-light: #666666;
+            --bg-color: #F4F7F6;
+            --card-bg: #FFFFFF;
+            --warning-bg: #FFF4E5;
+            --warning-text: #D97706;
+            --info-bg: #E3F2FD;
+            --info-text: #1976D2;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Noto Sans TC", "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-dark);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Container */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--primary-blue);
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            padding: 40px;
+            margin-bottom: 30px;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: var(--text-dark);
+            border-left: 4px solid var(--primary-blue);
+            padding-left: 15px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: var(--primary-blue);
+        }
+
+        p {
+            color: var(--text-light);
+            margin-bottom: 15px;
+        }
+
+        ul, ol {
+            padding-left: 20px;
+            color: var(--text-light);
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        /* Special Boxes */
+        .note-box {
+            background-color: var(--info-bg);
+            color: var(--info-text);
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            margin-top: 15px;
+            border-left: 4px solid var(--info-text);
+        }
+
+        .warning-box {
+            background-color: var(--warning-bg);
+            color: var(--warning-text);
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            margin-top: 15px;
+            border-left: 4px solid var(--warning-text);
+        }
+
+        .code-snippet {
+            font-family: 'Courier New', Courier, monospace;
+            background: #eee;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #d63384;
+            font-weight: bold;
+        }
+
+        /* Images */
+        .img-container {
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .img-container img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid #eee;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .caption {
+            font-size: 0.85rem;
+            color: #888;
+            margin-top: 10px;
+            display: block;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding-top: 40px;
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            h1 { font-size: 2rem; }
+            .card { padding: 25px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>SmartPlug 設定指南</h1>
+        <p class="subtitle">乙太網路版本 | 快速安裝與配置手冊</p>
+    </header>
+
+    <main>
+        <!-- Section 1: Connection -->
+        <section class="card">
+            <h2>1. 硬體連接與啟動</h2>
+            <p>請依照以下步驟完成硬體的基本架設：</p>
+            <ol>
+                <li>將網路線（LAN）連接至智慧插座。</li>
+                <li>接上電源線，並等待設備完成啟動程序。</li>
+            </ol>
+        </section>
+
+        <!-- Section 2: Login -->
+        <section class="card">
+            <h2>2. 登入管理介面</h2>
+            <p>確保您的電腦或手機已連接至與設備相同的區域網路（Local Network）。</p>
+            
+            <h3>進入登錄頁面</h3>
+            <p>開啟瀏覽器，於網址列輸入：<span class="code-snippet">http://smartplug.local</span></p>
+            
+            <div class="note-box">
+                <strong>💡 Windows 用戶請注意：</strong><br>
+                若使用 Windows 電腦操作，請務必先安裝 <strong>"Bonjour Service"</strong> 應用程式，方可順利解析上述網址。
+            </div>
+
+            <h3>輸入帳號密碼</h3>
+            <p>輸入原廠預設密碼：<span class="code-snippet">123456</span>，即可進入操作主頁面。</p>
+        </section>
+
+        <!-- Section 3: Configuration -->
+        <section class="card">
+            <h2>3. 網路參數設定 (IP 配置)</h2>
+            <p>若改用固定IP登錄設備，請先點擊操作頁面中"系統設定"按鍵，務必遵循下列關鍵步驟：</p>
+
+            <h3>步驟 A：取消 DHCP 功能</h3>
+            <p>您<strong>必須</strong>先取消勾選 <span class="code-snippet">DHCP</span> (啟用動態 IP) 選項，參考下圖：</p>
+            
+            <div class="img-container">
+                     <img src="./img/image-1.png" alt="設定介面示意圖 - 取消 DHCP">
+                <span class="caption">圖示：使用固定IP登錄，須將「啟用動態 IP (DHCP)」取消勾選</span>
+            </div>
+
+            <h3>步驟 B：儲存設定</h3>
+            <p>完成任何更改後，請務必點擊<strong>「儲存設定」</strong>按鈕，系統會顯示<strong>「設定已成功儲存」</strong>訊息，此時才代表設定真正寫入完成。</p>
+        </section>
+
+        <!-- Section 4: Reboot & Warnings -->
+        <section class="card">
+            <h2>4. 重啟與注意事項</h2>
+            <p>設定完成後，關於「重新啟動」功能有重要的操作規範：</p>
+
+            <h3>重新啟動的操作</h3>
+            <p>一般情況下，按下<strong>「重新啟動」</strong>按鍵後，約等待 10 秒鐘左右，瀏覽器會跳出視窗做下列說明：</p>
+
+            <div class="warning-box">
+                <strong>⚠️ 重要訊息提醒：</strong><br>
+                若您剛剛修改了IP位址，也取消DHCP勾選，「重新啟動」後：<br>
+                1. 系統改採靜態IP登錄，無法再使用http://smartplug.local登錄<br>
+                2. 需在瀏覽器位址列<strong>手動</strong>輸入新設定的IP，才能夠重新進入登錄頁面<br>
+                3. 若無必要，請不要隨意更改Gat Way, Net Mask, DNS的設定值
+            </div>
+
+            <div class="img-container">
+                 <img src="./img/image-2.png" alt="設定介面示意圖 - 重啟警告">
+                <span class="caption">圖示：若修改IP，請手動輸入IP重新進入登錄頁面</span>
+            </div>
+        </section>
+
+        <!-- Section 5: Troubleshooting -->
+        <section class="card">
+            <h2>5. 故障排除</h2>
+            <p>萬一忘記了修改後的IP位址或修改過的登錄密碼，重新啟動後會無法連線：</p>
+            <p>此時請長按設備上的<strong>「回復出廠設定」</strong>(Restore Factory Settings) 按鈕3秒，將會把所有的設定值還原為出廠預設值(包括登錄密碼)。</p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; SmartPlug 智能家居系統 | 使用說明書 V1.0</p>
+    </footer>
+</div>
+
+</body>
+</html>

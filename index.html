@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧插座使用說明書 - 首頁</title>
+    <style>
+        :root {
+            --bg-color: #F0F2F5;
+            --card-bg: #FFFFFF;
+            --primary-blue: #0D47A1;   /* 標題藍色 */
+            --eth-gold: #827717;       /* 乙太網路土金色 */
+            --wifi-green: #2E7D32;     /* WiFi 綠色 */
+            --op-red: #C62828;         /* 操作說明紅色 */
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            text-decoration: none; /* 移除超連結底線 */
+        }
+
+        body {
+            font-family: "Noto Sans TC", "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .menu-container {
+            width: 100%;
+            max-width: 600px;
+            background: transparent;
+        }
+
+        /* 標題區域 */
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            color: var(--primary-blue);
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: #607D8B;
+            font-size: 1.1rem;
+        }
+
+        /* 選單按鈕區域 */
+        .nav-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        /* 卡片共用樣式 */
+        .nav-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            border-left: 8px solid transparent; /* 預留左側顏色條 */
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .nav-card:active {
+            transform: scale(0.98);
+        }
+
+        /* 卡片內容排版 */
+        .card-content {
+            flex: 1;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .card-desc {
+            font-size: 0.95rem;
+            color: #90A4AE;
+            font-weight: 400;
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            margin-left: 20px;
+            opacity: 0.8;
+        }
+
+        /* 箭頭圖示 */
+        .arrow {
+            font-size: 1.5rem;
+            color: #CFD8DC;
+            margin-left: 15px;
+            transition: color 0.3s, transform 0.3s;
+        }
+
+        .nav-card:hover .arrow {
+            color: #546E7A;
+            transform: translateX(5px);
+        }
+
+        /* 個別卡片配色 (對應附件圖片顏色) */
+        
+        /* 1. 乙太網路 (土金色/棕色系) */
+        .link-eth {
+            border-left-color: var(--eth-gold);
+        }
+        .link-eth .card-title {
+            color: var(--eth-gold);
+        }
+
+        /* 2. WiFi 網路 (綠色系) */
+        .link-wifi {
+            border-left-color: var(--wifi-green);
+        }
+        .link-wifi .card-title {
+            color: var(--wifi-green);
+        }
+
+        /* 3. 操作說明 (紅色系) */
+        .link-op {
+            border-left-color: var(--op-red);
+        }
+        .link-op .card-title {
+            color: var(--op-red);
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: #B0BEC5;
+        }
+
+        /* RWD 手機版調整 */
+        @media (max-width: 480px) {
+            header h1 { font-size: 2rem; }
+            .nav-card { padding: 20px; }
+            .card-title { font-size: 1.25rem; }
+            .card-icon { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="menu-container">
+        <header>
+            <h1>智慧插座使用說明書</h1>
+            <p>請選擇您的設定模式或操作指南</p>
+        </header>
+
+        <div class="nav-grid">
+            <!-- 1. 乙太網路連結 -->
+            <a href="ETH.html" class="nav-card link-eth">
+                <div class="card-content">
+                    <span class="card-title">乙太網路版初次啟動設定</span>
+                    <span class="card-desc">有線網路連接、靜態 IP 配置指南</span>
+                </div>
+                <div class="card-icon">🔌</div>
+                <div class="arrow">➜</div>
+            </a>
+
+            <!-- 2. WIFI 網路連結 -->
+            <a href="WIFI.html" class="nav-card link-wifi">
+                <div class="card-content">
+                    <span class="card-title">WIFI 網路版初次啟動設定</span>
+                    <span class="card-desc">無線熱點連接、SSID 與密碼設定</span>
+                </div>
+                <div class="card-icon">📶</div>
+                <div class="arrow">➜</div>
+            </a>
+
+            <!-- 3. 操作說明連結 -->
+            <a href="operation.html" class="nav-card link-op">
+                <div class="card-content">
+                    <span class="card-title">智能插座操作說明</span>
+                    <span class="card-desc">繼電器控制、溫度紀錄與系統設定</span>
+                </div>
+                <div class="card-icon">⚙️</div>
+                <div class="arrow">➜</div>
+            </a>
+        </div>
+
+        <footer>
+            &copy; Smart Home System | 智慧插座索引頁
+        </footer>
+    </div>
+
+</body>
+</html>
