@@ -1,283 +1,282 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+
+// ==========================================
+// 固定 MQTT 連線參數（不對使用者開放修改）
+// ==========================================
+const FIXED_MQTT = {
+  broker: 's4eb1262.ala.cn-hangzhou.emqxsl.cn',
+  port: '8883',   // MQTTS (MQTT over TLS，伺服器端 TCP 連線)
+  username: 'chuwm',
+  password: 'chuwengming'
+};
+
+// 產生 smartplug_XXXXXX 格式的 ClientID（6位隨機整數）
+function generateClientId(): string {
+  const num = Math.floor(Math.random() * 1000000);
+  return `smartplug_${num.toString().padStart(6, '0')}`;
+}
+
+type MqttStatus = 'disconnected' | 'connecting' | 'connected';
+type AnnounceStatus = 'waiting' | 'registered' | 'unregistered' | 'timeout';
 
 export default function LoginPage() {
   const router = useRouter();
 
-  // PlugID 狀態
+  // PlugID
   const [plugId, setPlugId] = useState('');
   const [plugIdError, setPlugIdError] = useState('');
 
-  // MQTT 連線狀態
-  const [mqttStatus, setMqttStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
-  const [mqttConfig, setMqttConfig] = useState({
-    broker: 'broker.emqx.io',
-    port: '8083',
-    clientId: '', // 初始化為空，等待 useEffect 生成
-    username: '',
-    password: ''
-  });
+  // ClientID（預設系統自動產生，使用者可自行修改）
+  const [clientId, setClientId] = useState<string>(() => generateClientId());
 
-  // 設定檔案
-  const [settings, setSettings] = useState<{
-    mqtt: { broker: string; port: string; clientId: string; username: string; password: string };
-    plugName: string;
-    loginPassword: string;
-    plugId?: string;
-  } | null>(null);
+  // MQTT 連線狀態
+  const [mqttStatus, setMqttStatus] = useState<MqttStatus>('disconnected');
+
+  // Announce 狀態機
+  const [announceStatus, setAnnounceStatus] = useState<AnnounceStatus>('waiting');
+  const announceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 插座資訊
   const [plugName, setPlugName] = useState('SmartPlug');
-  const [voltage, setVoltage] = useState<string>('-- V'); // 初始顯示
+  const [voltage, setVoltage] = useState<string>('-- V');
   const [voltageLoading, setVoltageLoading] = useState(false);
 
-  // ESP32 回應狀態
-  const [esp32Status, setEsp32Status] = useState<'waiting' | 'responding' | 'timeout' | 'success' | 'error'>('waiting');
-
-  // 登入狀態
+  // 登入
   const [loginPassword, setLoginPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // MQTT 配置顯示切換
-  const [showMqttConfig, setShowMqttConfig] = useState(true);
-
   // PlugID 驗證函數
   const validatePlugId = (id: string): string => {
-    if (id.length < 8) return '至少需要8個字元';
-    if (!/^[a-zA-Z0-9]+$/.test(id)) return '只能包含英文和數字，不允許中文及符號字元';
-    if (!/[a-zA-Z]/.test(id) || !/[0-9]/.test(id)) return '必須同時包含英文和數字';
+    if (!id) return 'PlugID 不能為空';
+    if (id.length < 8) return '至少需要 8 個字元';
+    if (!/^[a-zA-Z0-9]+$/.test(id)) return '只能包含英文和數字，不允許中文或符號';
+    if (!/[a-zA-Z]/.test(id) || !/[0-9]/.test(id)) return '必須同時包含英文字母和數字';
     return '';
   };
 
-  // 處理 PlugID 變更
   const handlePlugIdChange = (value: string) => {
     setPlugId(value);
-    const error = validatePlugId(value);
-    setPlugIdError(error);
+    setPlugIdError(validatePlugId(value));
   };
 
-  // 讀取設定檔案與啟動連線狀態輪詢
+  // 初始化：讀取設定中的 plugId
   useEffect(() => {
-    // 產生隨機 ClientID
-    const randomId = `smartplug_${Math.random().toString(16).slice(2, 10)}`;
-
     const loadSettings = async () => {
       try {
         const response = await fetch('/data/setting.json');
-        if (!response.ok) {
-          throw new Error('無法讀取設定檔案');
-        }
+        if (!response.ok) return;
         const data = await response.json();
-        setSettings(data);
-
-        // 更新 MQTT 配置初始值
-        setMqttConfig({
-          broker: data.mqtt?.broker || 'broker.emqx.io',
-          port: data.mqtt?.port || '8083',
-          clientId: data.mqtt?.clientId === 'smartplug_random' ? randomId : (data.mqtt?.clientId || randomId),
-          username: data.mqtt?.username || '',
-          password: data.mqtt?.password || ''
-        });
-
-        // 檢查後端目前是否已連線
-        checkMqttStatus();
-
         if (data.plugId) {
           setPlugId(data.plugId);
-          const error = validatePlugId(data.plugId);
-          if (error) setPlugIdError(error);
+          setPlugIdError(validatePlugId(data.plugId));
         }
-      } catch (error) {
-        console.error('讀取設定檔案時發生錯誤:', error);
-        setMqttConfig(prev => ({ ...prev, clientId: randomId }));
+      } catch (e) {
+        console.error('讀取設定檔案失敗:', e);
       }
     };
-
-    const checkMqttStatus = async () => {
-      // 如果還沒有 clientId，先不檢查
-      if (!mqttConfig.clientId) return;
-
-      try {
-        const response = await fetch(`/api/mqtt/status?clientId=${mqttConfig.clientId}`);
-        const data = await response.json();
-        if (data.connected) {
-          setMqttStatus('connected');
-          setShowMqttConfig(false);
-          fetchPlugName();
-          fetchVoltage();
-        } else {
-          setMqttStatus('disconnected');
-        }
-      } catch (e) { }
-    };
-
     loadSettings();
 
-    // 每 5 秒檢查一次連線狀態
-    const interval = setInterval(checkMqttStatus, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      if (announceTimerRef.current) clearInterval(announceTimerRef.current);
+    };
   }, []);
 
-  // 獲取插座名稱 (API)
-  const fetchPlugName = async () => {
+  // ==========================================
+  // Announce 狀態輪詢（MQTT 連線成功後啟動）
+  // ==========================================
+  const startAnnouncePolling = (cid: string) => {
+    if (announceTimerRef.current) clearInterval(announceTimerRef.current);
+    setAnnounceStatus('waiting');
+    let pollCount = 0;
+    const MAX_POLLS = 15; // 15 × 2s = 30 秒逾時
+
+    announceTimerRef.current = setInterval(async () => {
+      pollCount++;
+      try {
+        const res = await fetch(`/api/announce-status?clientId=${encodeURIComponent(cid)}`);
+        const data = await res.json();
+        if (data.responded) {
+          clearInterval(announceTimerRef.current!);
+          announceTimerRef.current = null;
+          setAnnounceStatus(data.registered ? 'registered' : 'unregistered');
+          if (data.registered) {
+            fetchPlugName(cid);
+            fetchVoltage(cid);
+          }
+        } else if (pollCount >= MAX_POLLS) {
+          clearInterval(announceTimerRef.current!);
+          announceTimerRef.current = null;
+          setAnnounceStatus('timeout');
+        }
+      } catch (e) {
+        console.error('輪詢 announce 狀態失敗:', e);
+      }
+    }, 2000);
+  };
+
+  // ==========================================
+  // 獲取插座資訊
+  // ==========================================
+  const fetchPlugName = async (cid: string) => {
     try {
-      const cid = sessionStorage.getItem('mqttClientId');
-      const response = await fetch(`/api/plugName?clientId=${encodeURIComponent(cid || '')}`);
+      const response = await fetch(`/api/plugName?clientId=${encodeURIComponent(cid)}`);
       const data = await response.json();
       if (data.plugName && data.plugName.trim() !== '') {
         setPlugName(data.plugName);
       }
-    } catch (error) {
-      console.error('獲取插座名稱時發生錯誤:', error);
+    } catch (e) {
+      console.error('獲取插座名稱失敗:', e);
     }
   };
 
-  // 獲取電壓 (API)
-  const fetchVoltage = async () => {
+  const fetchVoltage = async (cid: string) => {
     setVoltageLoading(true);
     try {
-      const cid = sessionStorage.getItem('mqttClientId');
-      const response = await fetch(`/api/voltage?clientId=${encodeURIComponent(cid || '')}`);
+      const response = await fetch(`/api/voltage?clientId=${encodeURIComponent(cid)}`);
       const data = await response.json();
-
-      // 根據回傳值判斷顯示
       if (data.voltage !== undefined && data.voltage !== 0) {
         setVoltage(`AC-${data.voltage}V`);
       } else {
         setVoltage('AC-0V (無數據)');
       }
-    } catch (error) {
-      console.error('獲取電壓時發生錯誤:', error);
+    } catch (e) {
+      console.error('獲取電壓失敗:', e);
       setVoltage('無法載入電壓');
     } finally {
       setVoltageLoading(false);
     }
   };
 
-  // 儲存 PlugID 和 MQTT 設定到設定檔案 (API)
-  const savePlugIdToSettings = async (id: string, mqttConfig: any) => {
+  // ==========================================
+  // 儲存 PlugID 與固定 MQTT 設定到伺服器
+  // ==========================================
+  const saveSettings = async (pid: string, cid: string): Promise<boolean> => {
     try {
-      // 讀取當前設定檔案，確保獲取完整的設定結構
-      const response = await fetch('/api/settings');
-      if (!response.ok) throw new Error('無法讀取設定檔案');
-      const currentSettings = await response.json();
+      const currentRes = await fetch('/api/settings');
+      if (!currentRes.ok) throw new Error('無法讀取設定');
+      const current = await currentRes.json();
 
-      // 更新 plugId 和 MQTT 設定，保留所有其他設定
       const newSettings = {
-        ...currentSettings,
-        plugId: id,
+        ...current,
+        plugId: pid,
         mqtt: {
-          ...currentSettings.mqtt,
-          broker: mqttConfig.broker,
-          port: mqttConfig.port,
-          clientId: mqttConfig.clientId,
-          username: mqttConfig.username || '',
-          password: mqttConfig.password || ''
+          ...current.mqtt,
+          broker: FIXED_MQTT.broker,
+          port: FIXED_MQTT.port,
+          clientId: cid,
+          username: FIXED_MQTT.username,
+          password: FIXED_MQTT.password
         }
       };
 
-      const saveResponse = await fetch('/api/settings', {
+      const saveRes = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newSettings)
       });
-
-      const result = await saveResponse.json();
-      if (!saveResponse.ok || !result.success) {
-        throw new Error(result.error || '儲存設定失敗');
-      }
-
-      console.log('PlugID 和 MQTT 設定已儲存到設定檔案:', {
-        plugId: id,
-        clientId: mqttConfig.clientId
-      });
-      return true;
-    } catch (error) {
-      console.error('儲存 PlugID 和 MQTT 設定時發生錯誤:', error);
+      const result = await saveRes.json();
+      return saveRes.ok && result.success;
+    } catch (e) {
+      console.error('儲存設定失敗:', e);
       return false;
     }
   };
 
+  // ==========================================
   // 連接 MQTT
+  // ==========================================
   const connectMqtt = async () => {
-    // 檢查 PlugID 是否有效
-    if (!plugId || plugIdError) {
-      alert('請輸入有效的 PlugID');
+    const pidError = validatePlugId(plugId);
+    if (pidError) {
+      setPlugIdError(pidError);
       return;
     }
 
-    if (!mqttConfig.broker || !mqttConfig.port || !mqttConfig.clientId) {
-      alert('請填寫完整的 MQTT 連線資訊');
-      return;
-    }
-
-    // 先儲存 PlugID 和 MQTT 設定到設定檔案
-    const saved = await savePlugIdToSettings(plugId, mqttConfig);
+    // 儲存設定
+    const saved = await saveSettings(plugId, clientId);
     if (!saved) {
-      alert('儲存 PlugID 失敗，請稍後再試');
+      alert('儲存設定失敗，請稍後再試');
       return;
     }
 
     setMqttStatus('connecting');
     setVoltage('偵測中...');
+    setAnnounceStatus('waiting');
 
     try {
-      // 呼叫後端 API 建立 MQTT 連線
       const response = await fetch('/api/mqtt/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(mqttConfig)
+        body: JSON.stringify({
+          broker: FIXED_MQTT.broker,
+          port: FIXED_MQTT.port,
+          clientId: clientId,
+          username: FIXED_MQTT.username,
+          password: FIXED_MQTT.password
+        })
       });
 
       const data = await response.json();
 
       if (data.success) {
         setMqttStatus('connected');
-        setShowMqttConfig(false);
 
-        // 保存連線資訊到 sessionStorage，供操作頁面使用
+        // 儲存連線資訊供操作頁面使用
         try {
-          sessionStorage.setItem('mqttClientId', mqttConfig.clientId);
+          sessionStorage.setItem('mqttClientId', clientId);
           sessionStorage.setItem('plugId', plugId);
-          console.log('連線資訊已保存到 sessionStorage');
         } catch (e) {
-          console.error('保存 sessionStorage 失敗:', e);
+          console.error('寫入 sessionStorage 失敗:', e);
         }
 
-        // 獲取靜態名稱
-        fetchPlugName();
-
-        // 關鍵：延遲 2.5 秒後呼叫 API 獲取電壓
-        // 這是為了確保 ESP32 已經處理 announce 並發送完畢初始狀態
-        setTimeout(() => {
-          fetchVoltage();
-        }, 2500);
+        // 啟動 Announce 輪詢
+        startAnnouncePolling(clientId);
 
       } else {
         setMqttStatus('disconnected');
-        alert('MQTT 連線失敗: ' + data.message);
+        setVoltage('-- V');
+        alert('MQTT 連線失敗：' + data.message);
       }
-    } catch (error) {
+    } catch (e) {
       setMqttStatus('disconnected');
       setVoltage('-- V');
-      console.error('MQTT 連線錯誤:', error);
-      alert('MQTT 連線失敗，請檢查網路設定');
+      console.error('MQTT 連線錯誤:', e);
+      alert('MQTT 連線失敗，請確認網路設定');
     }
   };
 
-  // 登入處理
+  // 重置連線
+  const resetConnection = () => {
+    if (announceTimerRef.current) {
+      clearInterval(announceTimerRef.current);
+      announceTimerRef.current = null;
+    }
+    setMqttStatus('disconnected');
+    setAnnounceStatus('waiting');
+    setVoltage('-- V');
+    setLoginPassword('');
+    setErrorMessage('');
+  };
+
+  // ==========================================
+  // 登入
+  // ==========================================
   const handleLogin = async () => {
+    if (announceStatus !== 'registered') return;
     if (!loginPassword) {
       setErrorMessage('請輸入密碼');
       return;
     }
 
-    // 再次確保 Session 正確 (雙重保險)
-    if (plugId) sessionStorage.setItem('plugId', plugId);
-    if (mqttConfig.clientId) sessionStorage.setItem('mqttClientId', mqttConfig.clientId);
+    // 確保 session 正確
+    try {
+      sessionStorage.setItem('plugId', plugId);
+      sessionStorage.setItem('mqttClientId', clientId);
+    } catch (e) { }
 
     setErrorMessage('');
     setLoginLoading(true);
@@ -286,220 +285,169 @@ export default function LoginPage() {
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          password: loginPassword,
-          clientId: mqttConfig.clientId
-        })
+        body: JSON.stringify({ password: loginPassword, clientId })
       });
 
       if (response.ok) {
-        console.log('登入成功，載入操作面板...');
+        console.log('✅ 登入成功，載入操作面板...');
         router.push('/operation');
       } else {
         const data = await response.json();
-        setErrorMessage(data.message || '登入失敗，請檢查密碼。');
+        setErrorMessage(data.message || '密碼錯誤，請重新輸入。');
       }
-    } catch (error) {
-      console.error('登入錯誤:', error);
+    } catch (e) {
       setErrorMessage('登入失敗，請稍後再試。');
     } finally {
       setLoginLoading(false);
     }
   };
 
-  // Enter 鍵登入
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && mqttStatus === 'connected' && !loginLoading) {
+    if (e.key === 'Enter' && announceStatus === 'registered' && !loginLoading) {
       handleLogin();
     }
   };
 
+  // Announce 狀態 UI 設定
+  const announceUI = {
+    waiting:      { color: 'text-yellow-700 bg-yellow-50 border-yellow-200', icon: '⏳', text: '等待 ESP32 回應中...' },
+    registered:   { color: 'text-green-700 bg-green-50 border-green-200',   icon: '✓',  text: 'ESP32 設備已授權，請輸入密碼' },
+    unregistered: { color: 'text-red-700 bg-red-50 border-red-200',         icon: '✗',  text: '此 ClientID 尚未在 ESP32 設備中註冊' },
+    timeout:      { color: 'text-orange-700 bg-orange-50 border-orange-200', icon: '⚠', text: 'ESP32 未回應（連線逾時），請確認設備電源' },
+  };
+
+  const passwordEnabled = mqttStatus === 'connected' && announceStatus === 'registered';
+
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-5">
       <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-gray-800 text-center mb-6">
+        <h1 className="text-2xl font-bold text-black text-center mb-6">
           智能家居遠控系統
         </h1>
 
         {/* PlugID 輸入區 */}
-        <div className="mb-6">
-          <label className="block text-gray-700 font-medium mb-2">
-            PlugID (用於區分不同 ESP32 設備)
+        <div className="mb-5">
+          <label className="block text-black font-semibold mb-2">
+            PlugID <span className="text-gray-500 font-normal text-sm">（用於識別 ESP32 設備）</span>
           </label>
           <input
             type="text"
             value={plugId}
             onChange={(e) => handlePlugIdChange(e.target.value)}
-            placeholder="至少8個字，限英文+數字之組合"
-            className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
-            disabled={mqttStatus === 'connecting' || mqttStatus === 'connected'}
+            placeholder="例：sp123456（至少8碼，英文+數字）"
+            className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-black placeholder-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            disabled={mqttStatus !== 'disconnected'}
           />
           {plugIdError && (
-            <div className="text-red-600 text-sm mt-2">{plugIdError}</div>
+            <div className="text-red-600 text-sm mt-1">{plugIdError}</div>
           )}
           {!plugIdError && plugId && mqttStatus === 'disconnected' && (
-            <div className="text-green-600 text-sm mt-2">✓ PlugID 格式正確</div>
+            <div className="text-green-600 text-sm mt-1">✓ PlugID 格式正確</div>
           )}
         </div>
 
-        {/* MQTT 連線配置區 */}
-        {showMqttConfig && (
-          <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-lg font-semibold text-blue-900">MQTT 連線設定</h2>
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${mqttStatus === 'connected' ? 'bg-green-500 text-white' :
-                mqttStatus === 'connecting' ? 'bg-yellow-500 text-white' :
-                  'bg-gray-500 text-white'
-                }`}>
-                {mqttStatus === 'connected' ? '已連線' :
-                  mqttStatus === 'connecting' ? '連線中...' :
-                    '未連線'}
-              </span>
-            </div>
+        {/* ClientID 輸入（預設自動產生，可手動修改） */}
+        <div className="mb-5">
+          <label className="block text-black font-semibold mb-2">
+            Client ID <span className="text-gray-500 font-normal text-sm">（可修改，預設系統自動產生）</span>
+          </label>
+          <input
+            type="text"
+            value={clientId}
+            onChange={(e) => setClientId(e.target.value)}
+            placeholder="smartplug_123456"
+            disabled={mqttStatus !== 'disconnected'}
+            className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-black font-mono text-sm placeholder-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
+          />
+        </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  伺服器位址 *
-                </label>
-                <input
-                  type="text"
-                  value={mqttConfig.broker}
-                  onChange={(e) => setMqttConfig({ ...mqttConfig, broker: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  placeholder={settings ? settings.mqtt.broker : "broker.emqx.io"}
-                  disabled={mqttStatus === 'connecting'}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    連線埠號 *
-                  </label>
-                  <input
-                    type="text"
-                    value={mqttConfig.port}
-                    onChange={(e) => setMqttConfig({ ...mqttConfig, port: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                    placeholder={settings ? settings.mqtt.port : "8083"}
-                    disabled={mqttStatus === 'connecting'}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Client ID *
-                  </label>
-                  <input
-                    type="text"
-                    value={mqttConfig.clientId}
-                    onChange={(e) => setMqttConfig({ ...mqttConfig, clientId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                    placeholder={settings ? settings.mqtt.clientId : "client_id"}
-                    disabled={mqttStatus === 'connecting'}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  使用者名稱
-                </label>
-                <input
-                  type="text"
-                  value={mqttConfig.username}
-                  onChange={(e) => setMqttConfig({ ...mqttConfig, username: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  placeholder={settings ? (settings.mqtt.username || "選填") : "選填"}
-                  disabled={mqttStatus === 'connecting'}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  連線密碼
-                </label>
-                <input
-                  type="password"
-                  value={mqttConfig.password}
-                  onChange={(e) => setMqttConfig({ ...mqttConfig, password: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  placeholder={settings ? (settings.mqtt.password ? "******" : "選填") : "選填"}
-                  disabled={mqttStatus === 'connecting'}
-                />
-              </div>
-
-              <button
-                onClick={connectMqtt}
-                disabled={mqttStatus === 'connecting' || mqttStatus === 'connected'}
-                className={`w-full py-3 rounded-lg font-medium transition-opacity ${mqttStatus === 'connected'
-                  ? 'bg-green-500 text-white cursor-not-allowed'
-                  : mqttStatus === 'connecting'
-                    ? 'bg-yellow-500 text-white cursor-wait'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
-              >
-                {mqttStatus === 'connected' ? '✓ 已連線' :
-                  mqttStatus === 'connecting' ? '連線中...' :
-                    '連線 MQTT'}
-              </button>
-            </div>
+        {/* MQTT 連線控制區 */}
+        {mqttStatus === 'disconnected' && (
+          <div className="mb-5">
+            <button
+              onClick={connectMqtt}
+              disabled={!!plugIdError || !plugId}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              連線 MQTT
+            </button>
+            <p className="text-gray-500 text-xs mt-2 text-center">
+              伺服器：{FIXED_MQTT.broker}:{FIXED_MQTT.port}
+            </p>
           </div>
         )}
 
-        {/* 連線狀態顯示（收起後） */}
-        {!showMqttConfig && mqttStatus === 'connected' && (
-          <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-              <span className="text-sm text-green-800 font-medium">MQTT 已連線</span>
-            </div>
-            <button
-              onClick={() => {
-                setShowMqttConfig(true);
-                setMqttStatus('disconnected');
-                setVoltage('-- V');
-              }}
-              className="text-xs text-green-700 hover:text-green-900 underline"
-            >
-              查看設定
+        {mqttStatus === 'connecting' && (
+          <div className="mb-5">
+            <button disabled className="w-full py-3 bg-yellow-500 text-white rounded-lg font-medium cursor-wait">
+              連線中...
             </button>
           </div>
         )}
 
-        {/* 插座名稱 */}
-        <div className="mb-5">
-          <label className="block text-gray-700 font-medium mb-2">插座名稱</label>
-          <input
-            type="text"
-            value={plugName}
-            readOnly
-            className="w-full px-3 py-3 bg-gray-100 border border-gray-300 rounded-lg text-gray-600"
-          />
-        </div>
+        {mqttStatus === 'connected' && (
+          <div className="mb-5">
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                <span className="text-sm text-black font-medium">MQTT 已連線</span>
+              </div>
+              <button
+                onClick={resetConnection}
+                className="text-xs text-gray-600 hover:text-gray-900 underline"
+              >
+                重新設定
+              </button>
+            </div>
+
+            {/* Announce 狀態 */}
+            <div className={`p-3 rounded-lg border ${announceUI[announceStatus].color}`}>
+              <div className="flex items-center gap-2">
+                <span className="text-base">{announceUI[announceStatus].icon}</span>
+                <span className="text-sm font-medium text-black">
+                  {announceUI[announceStatus].text}
+                </span>
+                {announceStatus === 'waiting' && (
+                  <span className="ml-auto text-xs text-gray-500 animate-pulse">輪詢中...</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 插座名稱（已授權後顯示） */}
+        {passwordEnabled && (
+          <div className="mb-4">
+            <label className="block text-black font-semibold mb-2">插座名稱</label>
+            <input
+              type="text"
+              value={plugName}
+              readOnly
+              className="w-full px-3 py-3 bg-gray-50 border border-gray-300 rounded-lg text-black"
+            />
+          </div>
+        )}
 
         {/* 登入密碼 */}
         <div className="mb-5">
-          <label className="block text-gray-700 font-medium mb-2">請輸入登入密碼</label>
+          <label className="block text-black font-semibold mb-2">登入密碼</label>
           <input
             type="password"
             value={loginPassword}
-            onChange={(e) => {
-              setLoginPassword(e.target.value);
-              setErrorMessage('');
-            }}
+            onChange={(e) => { setLoginPassword(e.target.value); setErrorMessage(''); }}
             onKeyPress={handleKeyPress}
-            placeholder="請輸入密碼"
-            disabled={mqttStatus !== 'connected' || loginLoading}
-            className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+            placeholder={passwordEnabled ? '請輸入登入密碼' : '請先完成 MQTT 連線與設備授權'}
+            disabled={!passwordEnabled || loginLoading}
+            className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none text-black placeholder-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
           {errorMessage && (
-            <div className="text-red-600 text-sm mt-2">{errorMessage}</div>
+            <div className="text-red-600 text-sm mt-1">{errorMessage}</div>
           )}
-          {mqttStatus !== 'connected' && (
-            <div className="text-gray-500 text-sm mt-2">
-              請先連線 MQTT 伺服器
+          {!passwordEnabled && mqttStatus !== 'disconnected' && announceStatus !== 'registered' && (
+            <div className="text-gray-500 text-sm mt-1">
+              {announceStatus === 'waiting' && '等待 ESP32 設備確認授權...'}
+              {announceStatus === 'unregistered' && '此 ClientID 尚未在設備中授權，請先至 ESP32 設備進行註冊'}
+              {announceStatus === 'timeout' && '請確認 ESP32 設備電源並重新連線'}
             </div>
           )}
         </div>
@@ -507,15 +455,15 @@ export default function LoginPage() {
         {/* 登入按鈕 */}
         <button
           onClick={handleLogin}
-          disabled={mqttStatus !== 'connected' || loginLoading}
-          className="w-full py-3 bg-gradient-to-r from-green-500 to-green-400 text-white rounded-lg text-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
+          disabled={!passwordEnabled || loginLoading}
+          className="w-full py-3 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-lg text-lg font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loginLoading ? '登入中...' : '登入'}
         </button>
 
         {/* 系統電壓規格 */}
-        <div className="mt-8 bg-blue-500 text-white p-5 rounded-xl text-center">
-          <p className="text-lg font-bold mb-2">系統電壓規格</p>
+        <div className="mt-6 bg-blue-600 text-white p-5 rounded-xl text-center">
+          <p className="text-base font-bold mb-1">系統電壓規格</p>
           <span className={`text-3xl font-bold ${voltageLoading ? 'opacity-70 animate-pulse' : ''}`}>
             {voltage}
           </span>

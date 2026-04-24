@@ -1,10 +1,10 @@
 {
     "mqtt": {
-        "broker": "broker.emqx.io",
-        "port": "8083",
-        "clientId": "smartplug_865c165e",
-        "username": "",
-        "password": ""
+        "broker": "s4eb1262.ala.cn-hangzhou.emqxsl.cn",
+        "port": "8883",
+        "clientId": "smartplug_445566",
+        "username": "chuwm",
+        "password": "chuwengming"
     },
     "plugName": "SmartPlug",
     "loginPassword": "123456",

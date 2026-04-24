@@ -76,6 +76,8 @@ let currentPlugId: string = 'defaultPlug';
 interface ClientStateCache {
   plugName: string;
   voltage: number;
+  // null = 尚未收到 ESP32 announce 回應; true = 已授權; false = 未授權
+  espRegistered: boolean | null;
 }
 const CACHE_KEY = Symbol.for('smartplug.mqtt.clientCache');
 if (!(global as any)[CACHE_KEY]) {
@@ -86,7 +88,7 @@ const clientCache: Map<string, ClientStateCache> = (global as any)[CACHE_KEY];
 function getOrCreateCache(clientId: string): ClientStateCache {
   if (!clientCache.has(clientId)) {
     console.log(`🆕 [Lib] 為 ${clientId} 建立新的資料快取`);
-    clientCache.set(clientId, { plugName: 'SmartPlug', voltage: 0 });
+    clientCache.set(clientId, { plugName: 'SmartPlug', voltage: 0, espRegistered: null });
   }
   return clientCache.get(clientId)!;
 }
@@ -167,6 +169,11 @@ function initSharedHandlers() {
               }
             }
             if (payload.plugName !== undefined) cache.plugName = payload.plugName;
+            // 記錄 ESP32 回應的授權狀態 (registered = true/false)
+            if (payload.registered !== undefined) {
+              cache.espRegistered = Boolean(payload.registered);
+              console.log(`🔑 [Lib] [${clientId}] ESP32 Announce 回應: registered=${cache.espRegistered}`);
+            }
             console.log(`✅ [Lib] [${clientId}] 自 announce 更新數據: ${cache.voltage}V, ${cache.plugName} (Raw: ${msgString})`);
           } catch (e) { }
         }
@@ -185,6 +192,10 @@ export async function connectMqtt(config: MqttConfig): Promise<{ success: boolea
 
   try {
     console.log('🔌 透過 SharedManager 請求連接 MQTT:', config.broker);
+
+    // 連線前重置 announce 狀態，避免殘留舊回應
+    const cacheEntry = getOrCreateCache(config.clientId);
+    cacheEntry.espRegistered = null;
 
     // 獲取當前 PlugID 正確設置 will 與初始化
     currentPlugId = await getPlugIdFromSettings();
@@ -285,6 +296,13 @@ export function getPlugName(clientId?: string): string {
   if (!clientId) return 'SmartPlug';
   const cache = getOrCreateCache(clientId);
   return cache.plugName;
+}
+
+// 獲取 ESP32 Announce 授權狀態 (null=尚未回應, true=已授權, false=未授權)
+export function getEspRegistered(clientId?: string): boolean | null {
+  if (!clientId) return null;
+  const cache = getOrCreateCache(clientId);
+  return cache.espRegistered;
 }
 
 // 獲取電壓
