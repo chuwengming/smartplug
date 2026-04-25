@@ -35,6 +35,9 @@ export default function LoginPage() {
   // MQTT 連線狀態
   const [mqttStatus, setMqttStatus] = useState<MqttStatus>('disconnected');
 
+  // ClientID 衝突提示
+  const [clientIdConflict, setClientIdConflict] = useState(false);
+
   // Announce 狀態機
   const [announceStatus, setAnnounceStatus] = useState<AnnounceStatus>('waiting');
   const announceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -196,6 +199,19 @@ export default function LoginPage() {
       return;
     }
 
+    // 連線前先檢查 ClientID 是否已被其他使用者佔用
+    setClientIdConflict(false);
+    try {
+      const checkRes = await fetch(`/api/client-status?clientId=${encodeURIComponent(clientId)}`);
+      const checkData = await checkRes.json();
+      if (checkData.inUse) {
+        setClientIdConflict(true);
+        return;   // 阻止連線
+      }
+    } catch (e) {
+      console.warn('無法檢查 ClientID 狀態，繼續連線:', e);
+    }
+
     // 儲存設定
     const saved = await saveSettings(plugId, clientId);
     if (!saved) {
@@ -354,11 +370,22 @@ export default function LoginPage() {
           <input
             type="text"
             value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
+            onChange={(e) => { setClientId(e.target.value); setClientIdConflict(false); }}
             placeholder="smartplug_123456"
             disabled={mqttStatus !== 'disconnected'}
-            className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-black font-mono text-sm placeholder-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className={`w-full px-3 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-black font-mono text-sm placeholder-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed ${clientIdConflict ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
           />
+          {clientIdConflict && (
+            <div className="mt-2 flex items-start gap-2 bg-red-50 border border-red-300 rounded-lg px-3 py-2">
+              <span className="text-red-500 text-sm font-bold mt-0.5">⚠</span>
+              <div>
+                <p className="text-red-700 text-sm font-semibold">Client ID 已被佔用</p>
+                <p className="text-red-600 text-xs mt-0.5">
+                  「{clientId}」目前已有其他使用者連線中，請修改 Client ID 後再試。
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* MQTT 連線控制區 */}

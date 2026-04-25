@@ -1,20 +1,11 @@
 {
-    "mqtt": {
-        "broker": "s4eb1262.ala.cn-hangzhou.emqxsl.cn",
-        "port": "8883",
-        "clientId": "smartplug_445566",
-        "username": "chuwm",
-        "password": "chuwengming"
-    },
     "plugName": "SmartPlug",
     "loginPassword": "123456",
-    "relayNames": {
-        "relay1": "Relay 1",
-        "relay2": "Relay 2",
-        "relay3": "Relay 3",
-        "relay4": "Relay 4",
-        "relay5": "Relay 5",
-        "relay6": "Relay 6"
-    },
-    "plugId": "sp123456"
+    "mqtt": {
+        "broker": "broker.emqx.io",
+        "port": "8083",
+        "clientId": "smartplug_random",
+        "username": "",
+        "password": ""
+    }
 }

@@ -26,6 +26,14 @@ export default function OperationPanel() {
   const [mqttConnected, setMqttConnected] = useState(false);
   const [currentPage, setCurrentPage] = useState<'home' | 'temp-record' | 'system-settings'>('home');
 
+  // ESP32 設備在線狀態
+  // 'unknown'      = 剛進入頁面，尚未收到 live 訊息（等待 retained 訊息）
+  // 'online'       = 設備在線，可正常操作
+  // 'offline'      = 設備離線（LWT 觸發），UI 凍結
+  // 'reconnecting' = 設備重啟中，正在同步狀態，UI 暫時鎖定
+  type DeviceStatus = 'unknown' | 'online' | 'offline' | 'reconnecting';
+  const [deviceStatus, setDeviceStatus] = useState<DeviceStatus>('unknown');
+
   // 系統設定狀態
   const [systemSettings, setSystemSettings] = useState({
     plugName: '',
@@ -269,8 +277,8 @@ export default function OperationPanel() {
     ws.onopen = () => {
       console.log('✅ WebSocket 連接已成功建立');
       setMqttConnected(true);
-      // 暫時不發送任何訊息，只保持連接
-      // 伺服器端會在500ms後發送初始數據
+      // 重設設備狀態為 unknown，等待 server.js 轉發 retained live 訊息
+      setDeviceStatus('unknown');
     };
 
     ws.onmessage = (event) => {
@@ -328,9 +336,6 @@ export default function OperationPanel() {
         if (data.temperature !== undefined && data.temperature !== null) {
           setTemperature(data.temperature);
         }
-        if (data.voltage !== undefined) {
-          // 如果需要顯示電壓，可以在此處理
-        }
         break;
 
       case 'relay_response':
@@ -349,16 +354,37 @@ export default function OperationPanel() {
         setSystemSettings(prev => ({ ...prev, plugName: data.plugName }));
         break;
 
+      // ── ESP32 設備在線狀態（LWT 機制） ──
+      case 'device_offline':
+        console.warn(`📴 [Device] ESP32 離線 (plugId: ${data.plugId})`);
+        setDeviceStatus('offline');
+        break;
+
+      case 'device_reconnecting':
+        console.log(`🔆 [Device] ESP32 重新啟動，同步狀態中... (plugId: ${data.plugId})`);
+        setDeviceStatus('reconnecting');
+        break;
+
+      case 'device_online':
+        console.log(`✅ [Device] ESP32 同步完成，恢復操作 (plugId: ${data.plugId})`);
+        setDeviceStatus('online');
+        break;
+
       case 'error':
         console.error('伺服器錯誤:', data.message);
-        // alert('操作失敗: ' + data.message);
         break;
     }
   };
 
+  // 設備是否可操作
+  // 'online'  → 確認在線，可操作
+  // 'unknown' → 尚未收到 live 訊號（LWT 機制啟動中），允許操作（避免實驗期間卡住）
+  // 'offline' / 'reconnecting' → 凍結操作
+  const isDeviceReady = deviceStatus === 'online' || deviceStatus === 'unknown';
+
   // 切換繼電器
   const toggleRelay = (id: number, state: boolean) => {
-    // 立即更新本地狀態
+    if (!isDeviceReady) return;
     setRelays(prev => prev.map(relay =>
       relay.id === id ? { ...relay, state } : relay
     ));
@@ -367,13 +393,12 @@ export default function OperationPanel() {
 
   // 點動功能
   const handlePulse = async (id: number) => {
-    // 先開啟
+    if (!isDeviceReady) return;
     setRelays(prev => prev.map(relay =>
       relay.id === id ? { ...relay, state: true } : relay
     ));
     sendCommand('relay_control', { relay_id: id, state: true });
 
-    // 1秒後關閉
     setTimeout(() => {
       setRelays(prev => prev.map(relay =>
         relay.id === id ? { ...relay, state: false } : relay
@@ -451,6 +476,42 @@ export default function OperationPanel() {
         {mqttConnected ? '已連線' : '已斷線'}
       </div>
 
+      {/* ── ESP32 設備離線/重連 覆蓋層（僅 offline / reconnecting 才全版凍結） ── */}
+      {(deviceStatus === 'offline' || deviceStatus === 'reconnecting') && (
+        <div className="fixed inset-0 z-40 bg-black/65 flex items-center justify-center px-6">
+          <div className="bg-white rounded-2xl p-8 text-center shadow-2xl max-w-sm w-full">
+            {deviceStatus === 'offline' && (
+              <>
+                <div className="text-5xl mb-4">⚡</div>
+                <h2 className="text-xl font-bold text-gray-800 mb-2">設備離線</h2>
+                <p className="text-gray-500 text-sm">
+                  ESP32 已失去連線，等待設備重新啟動...
+                </p>
+                <div className="mt-5 flex items-center justify-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-orange-400 animate-bounce [animation-delay:0ms]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-orange-400 animate-bounce [animation-delay:150ms]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-orange-400 animate-bounce [animation-delay:300ms]" />
+                </div>
+              </>
+            )}
+            {deviceStatus === 'reconnecting' && (
+              <>
+                <div className="text-5xl mb-4">🔄</div>
+                <h2 className="text-xl font-bold text-gray-800 mb-2">設備重新連線中</h2>
+                <p className="text-gray-500 text-sm">
+                  正在同步繼電器狀態，請稍候...
+                </p>
+                <div className="mt-5 flex items-center justify-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-bounce [animation-delay:0ms]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-bounce [animation-delay:150ms]" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-400 animate-bounce [animation-delay:300ms]" />
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 主內容區 */}
       <div className="flex-1 p-4 pb-24 overflow-y-auto overflow-x-hidden">
         {currentPage === 'home' && (
@@ -475,7 +536,7 @@ export default function OperationPanel() {
               {relays.map((relay) => (
                 <div
                   key={relay.id}
-                  className="bg-white rounded-xl shadow-lg p-4 flex flex-col items-center gap-3 hover:shadow-xl transition-shadow"
+                  className={`bg-white rounded-xl shadow-lg p-4 flex flex-col items-center gap-3 transition-shadow ${isDeviceReady ? 'hover:shadow-xl' : 'opacity-50'}`}
                 >
                   <div className="font-bold text-gray-800 text-center text-sm md:text-base">
                     {relay.name}
@@ -483,7 +544,7 @@ export default function OperationPanel() {
 
                   <div className="flex items-center gap-2 flex-wrap justify-center w-full">
                     {/* 使用 CSS 樣式的開關 */}
-                    <div className="checkbox-wrapper-25">
+                    <div className={`checkbox-wrapper-25 ${!isDeviceReady ? 'pointer-events-none' : ''}`}>
                       <input
                         type="checkbox"
                         checked={relay.state}
@@ -492,9 +553,9 @@ export default function OperationPanel() {
                           toggleRelay(relay.id, e.target.checked);
                         }}
                         id={`switch-${relay.id}`}
+                        disabled={!isDeviceReady}
                       />
-                      <label htmlFor={`switch-${relay.id}`} className="cursor-pointer">
-                        {/* 點擊區域擴展 */}
+                      <label htmlFor={`switch-${relay.id}`} className={isDeviceReady ? 'cursor-pointer' : 'cursor-not-allowed'}>
                       </label>
                     </div>
 
@@ -504,7 +565,8 @@ export default function OperationPanel() {
                         console.log('點動按鈕點擊', relay.id);
                         handlePulse(relay.id);
                       }}
-                      className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-3 py-1.5 rounded-md text-xs font-bold shadow-md transition-all hover:shadow-lg active:translate-y-0.5"
+                      disabled={!isDeviceReady}
+                      className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white px-3 py-1.5 rounded-md text-xs font-bold shadow-md transition-all hover:shadow-lg active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-500 disabled:active:translate-y-0"
                     >
                       點動
                     </button>
@@ -512,7 +574,8 @@ export default function OperationPanel() {
                     {/* 修改按鈕 */}
                     <button
                       onClick={() => handleEditName(relay.id)}
-                      className="bg-sky-400 hover:bg-sky-500 active:bg-sky-600 text-white px-3 py-1.5 rounded-md text-xs font-bold shadow-md transition-all hover:shadow-lg active:translate-y-0.5"
+                      disabled={!isDeviceReady}
+                      className="bg-sky-400 hover:bg-sky-500 active:bg-sky-600 text-white px-3 py-1.5 rounded-md text-xs font-bold shadow-md transition-all hover:shadow-lg active:translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-sky-400 disabled:active:translate-y-0"
                     >
                       修改
                     </button>
