@@ -469,11 +469,23 @@ export default function OperationPanel() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      {/* WebSocket 狀態指示 */}
-      <div className={`fixed top-3 right-3 px-3 py-1.5 rounded-full text-xs font-bold z-50 flex items-center gap-2 ${mqttConnected ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+      {/* 右上角狀態徽章群組 */}
+      <div className="fixed top-3 right-3 z-50 flex flex-col items-end gap-1.5">
+        {/* WebSocket 狀態指示 */}
+        <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 ${mqttConnected ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+          <div className={`w-2 h-2 rounded-full bg-white ${mqttConnected ? 'animate-pulse' : ''}`}></div>
+          {mqttConnected ? '已連線' : '已斷線'}
+        </div>
+
+        {/* ESP32 設備連線狀態徽章 */}
+        <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors duration-300 ${
+          deviceStatus === 'online' || deviceStatus === 'unknown'
+            ? 'bg-blue-500 text-white'
+            : 'bg-red-600 text-white'
         }`}>
-        <div className={`w-2 h-2 rounded-full bg-white ${mqttConnected ? 'animate-pulse' : ''}`}></div>
-        {mqttConnected ? '已連線' : '已斷線'}
+          <div className={`w-2 h-2 rounded-full bg-white ${deviceStatus === 'online' ? 'animate-pulse' : ''}`}></div>
+          {deviceStatus === 'online' || deviceStatus === 'unknown' ? 'smartplug 連線中' : 'smartplug 離線'}
+        </div>
       </div>
 
       {/* ── ESP32 設備離線/重連 覆蓋層（僅 offline / reconnecting 才全版凍結） ── */}
