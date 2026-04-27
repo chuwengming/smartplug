@@ -474,7 +474,7 @@ export default function OperationPanel() {
         {/* WebSocket 狀態指示 */}
         <div className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2 ${mqttConnected ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
           <div className={`w-2 h-2 rounded-full bg-white ${mqttConnected ? 'animate-pulse' : ''}`}></div>
-          {mqttConnected ? '已連線' : '已斷線'}
+          {mqttConnected ? 'MQTT已連線' : 'MQTT已斷線'}
         </div>
 
         {/* ESP32 設備連線狀態徽章 */}
@@ -484,7 +484,7 @@ export default function OperationPanel() {
             : 'bg-red-600 text-white'
         }`}>
           <div className={`w-2 h-2 rounded-full bg-white ${deviceStatus === 'online' ? 'animate-pulse' : ''}`}></div>
-          {deviceStatus === 'online' || deviceStatus === 'unknown' ? 'smartplug 連線中' : 'smartplug 離線'}
+          {deviceStatus === 'online' || deviceStatus === 'unknown' ? '設備已連線' : '設備已離線'}
         </div>
       </div>
 
