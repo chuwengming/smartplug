@@ -13,10 +13,10 @@ const FIXED_MQTT = {
   password: 'chuwengming'
 };
 
-// 產生 smartplug_XXXXXX 格式的 ClientID（6位隨機整數）
+// 產生 userXXXXXX 格式的 ClientID（6位隨機整數）
 function generateClientId(): string {
   const num = Math.floor(Math.random() * 1000000);
-  return `smartplug_${num.toString().padStart(6, '0')}`;
+  return `user${num.toString().padStart(6, '0')}`;
 }
 
 type MqttStatus = 'disconnected' | 'connecting' | 'connected';
@@ -371,7 +371,7 @@ export default function LoginPage() {
             type="text"
             value={clientId}
             onChange={(e) => { setClientId(e.target.value); setClientIdConflict(false); }}
-            placeholder="smartplug_123456"
+            placeholder="user123456"
             disabled={mqttStatus !== 'disconnected'}
             className={`w-full px-3 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-black font-mono text-sm placeholder-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed ${clientIdConflict ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}
           />

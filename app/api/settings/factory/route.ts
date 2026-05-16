@@ -120,7 +120,19 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        console.log('✅ 所有廣播訊息已發送完成');
+        // 10. 安全機制：將所有繼電器全數關閉
+        console.log('🔌 正在執行安全重置：關閉所有繼電器...');
+        for (let i = 0; i < 6; i++) {
+            const controlTopic = `smartplug/${plugId}/${clientId}/control`;
+            const controlPayload = JSON.stringify({
+                id: i,
+                state: "0"
+            });
+            mqttClient.publish(controlTopic, controlPayload, { qos: 1 });
+            console.log(`✅ 已發送繼電器 ${i} 關閉指令: ${controlTopic}`);
+        }
+
+        console.log('✅ 所有廣播與關閉指令已發送完成');
 
         return NextResponse.json({
             success: true,

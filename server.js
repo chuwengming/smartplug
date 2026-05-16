@@ -14,7 +14,7 @@ const dev = process.env.NODE_ENV !== 'production';
 const hostname = '0.0.0.0';
 const port = process.env.PORT || 3000;
 
-const app = next({ dev, hostname, port });
+const app = next({ dev, port });
 const handle = app.getRequestHandler();
 
 // ==========================================
@@ -226,8 +226,9 @@ mqttShared.on('global_message', (topic, message, sourceClientId) => {
                     const announceTopic = `smartplug/${plugId}/announce`;
                     for (const cid of onlineClients) {
                         const payload = JSON.stringify({ clientId: cid, plugId });
-                        publisher.publish(announceTopic, payload, { qos: 1 });
-                        console.log(`📢 [Live] [${plugId}] re-announce → ${cid}`);
+                        // 調降 QoS 至 0，減少 TLS 往返負擔
+                        publisher.publish(announceTopic, payload, { qos: 0 });
+                        console.log(`📢 [Live] [${plugId}] re-announce → ${cid} (QoS 0)`);
                     }
                 } else {
                     console.warn(`⚠️ [Live] [${plugId}] 無可用 MQTT 客端，無法發送 re-announce`);
@@ -271,18 +272,8 @@ mqttShared.on('global_message', (topic, message, sourceClientId) => {
                 broadcastToPlug(plugId, { type: 'device_online', plugId });
                 console.log(`✅ [Live] [${plugId}] 收到 ESP32 announce response，狀態同步完成，UI 解凍`);
 
-                // 主動請求 ESP32 推送 NVS 繼電器狀態，確保重啟後所有 Client 畫面同步
-                const clients = plugClients.get(plugId);
-                if (clients) {
-                    for (const cid of clients) {
-                        const mc = mqttShared.getClient(cid);
-                        if (mc && mc.connected) {
-                            mc.publish(`smartplug/${plugId}/get_status`, 'all', { qos: 1 });
-                            console.log(`📥 [Live] [${plugId}] 發送 get_status，請求 ESP32 推送繼電器狀態`);
-                            break;
-                        }
-                    }
-                }
+                // ESP32 收到 announce 會自動觸發 pushAllStatus 推送所有繼電器狀態，
+                // 這裡無需再次發送 get_status 請求。
             }
             // announce response 由 lib/mqtt.ts 的登錄頁面流程另行處理（espRegistered 判斷）
             // 此處不重複廣播，直接返回
@@ -523,8 +514,8 @@ app.prepare().then(async () => {
 
     const server = createServer(async (req, res) => {
         try {
-            const parsedUrl = parse(req.url, true);
-            await handle(req, res, parsedUrl);
+            // Next.js 15+ custom server: 不傳 parsedUrl，避免 host:port 疊加進路徑造成循環
+            await handle(req, res);
         } catch (err) {
             console.error('處理 HTTP 錯誤:', err);
             res.statusCode = 500;
@@ -547,11 +538,24 @@ app.prepare().then(async () => {
 
             console.log(`🔌 新連線: User=[${clientId}] -> Plug=[${plugId}]`);
 
-            // 若有待執行的清理計時器（使用者重新連線），立即取消
+            // 處理舊 Session 與計時器清理
             if (clientCleanupTimers.has(clientId)) {
                 clearTimeout(clientCleanupTimers.get(clientId).timer);
                 clientCleanupTimers.delete(clientId);
                 console.log(`✅ [Cleanup] [${clientId}] 重新連線，取消清理計時器`);
+            }
+
+            // 若該 clientId 已經存在（可能來自之前的 stale session），先從舊的 plugId 清單中移除
+            if (wsClients.has(clientId)) {
+                const oldInfo = wsClients.get(clientId);
+                const oldPlugId = oldInfo.plugId;
+                if (plugClients.has(oldPlugId)) {
+                    plugClients.get(oldPlugId).delete(clientId);
+                    if (plugClients.get(oldPlugId).size === 0) {
+                        plugClients.delete(oldPlugId);
+                    }
+                }
+                console.log(`🔄 [WS] [${clientId}] 變更 PlugID: ${oldPlugId} -> ${plugId}`);
             }
 
             wsClients.set(clientId, { ws, plugId });
@@ -668,7 +672,7 @@ app.prepare().then(async () => {
 
     // 處理 Upgrade 請求
     server.on('upgrade', (request, socket, head) => {
-        const { pathname } = parse(request.url);
+        const { pathname } = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
 
         if (pathname === '/api/ws/operation') {
             wss.handleUpgrade(request, socket, head, (ws) => {
