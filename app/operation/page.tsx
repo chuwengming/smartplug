@@ -24,7 +24,8 @@ export default function OperationPanel() {
     { id: 5, name: 'Relay 6', state: false },
   ]);
   const [mqttConnected, setMqttConnected] = useState(false);
-  const [currentPage, setCurrentPage] = useState<'home' | 'temp-record' | 'system-settings'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'temp-record'>('home');
+  const [deviceName, setDeviceName] = useState<string>('載入中…');
 
   // ESP32 設備在線狀態
   // 'unknown'      = 剛進入頁面，尚未收到 live 訊息（等待 retained 訊息）
@@ -34,103 +35,30 @@ export default function OperationPanel() {
   type DeviceStatus = 'unknown' | 'online' | 'offline' | 'reconnecting';
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatus>('unknown');
 
-  // 系統設定狀態
-  const [systemSettings, setSystemSettings] = useState({
-    plugName: '',
-    loginPassword: '',
-    mqttBroker: '',
-    mqttPort: '',
-    mqttClientId: '',
-    mqttUser: '',
-    mqttPwd: ''
-  });
-
-  // 載入設定
-  useEffect(() => {
-    if (currentPage === 'system-settings') {
-      loadSettings();
-    }
-  }, [currentPage]);
-
-  // 載入設定函數
-  const loadSettings = async () => {
+  const fetchDeviceNameFromMqtt = async () => {
     try {
-      const response = await fetch('/api/settings');
-      if (!response.ok) {
-        throw new Error('無法載入設定');
-      }
-      const data = await response.json();
-
-      setSystemSettings({
-        plugName: data.plugName || '',
-        loginPassword: '', // 密碼不顯示，留空
-        mqttBroker: data.mqtt.broker || '',
-        mqttPort: data.mqtt.port || '',
-        mqttClientId: data.mqtt.clientId || '',
-        mqttUser: data.mqtt.username || '',
-        mqttPwd: '' // 密碼不顯示，留空
-      });
-    } catch (error) {
-      console.error('載入設定失敗:', error);
-      alert('載入設定失敗，請稍後再試');
-    }
-  };
-
-  // 儲存設定
-  const handleSaveSettings = async () => {
-    try {
-      // 收集表單數據
-      const formData = {
-        plugName: systemSettings.plugName.trim(),
-        loginPassword: systemSettings.loginPassword.trim(),
-        mqtt: {
-          broker: systemSettings.mqttBroker.trim(),
-          port: systemSettings.mqttPort.trim(),
-          clientId: systemSettings.mqttClientId.trim(),
-          username: systemSettings.mqttUser.trim(),
-          password: systemSettings.mqttPwd.trim()
-        }
-      };
-
-      // 驗證必要欄位
-      if (!formData.mqtt.broker || !formData.mqtt.port || !formData.mqtt.clientId) {
-        alert('請填寫 MQTT Broker、Port 和 ClientID');
+      const clientId = sessionStorage.getItem('mqttClientId');
+      if (!clientId) {
+        setDeviceName('—');
         return;
       }
-
-      // 如果密碼為空，表示不修改
-      if (!formData.loginPassword) {
-        // 從現有設定中取得密碼
-        const currentSettings = await fetch('/api/settings').then(res => res.json());
-        formData.loginPassword = currentSettings.loginPassword;
+      const response = await fetch(`/api/plugName?clientId=${encodeURIComponent(clientId)}`);
+      if (!response.ok) {
+        setDeviceName('—');
+        return;
       }
-
-      if (!formData.mqtt.password) {
-        // 從現有設定中取得密碼
-        const currentSettings = await fetch('/api/settings').then(res => res.json());
-        formData.mqtt.password = currentSettings.mqtt.password;
+      const data = await response.json();
+      if (data.plugName && String(data.plugName).trim() !== '') {
+        setDeviceName(String(data.plugName).trim());
       }
-
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        alert('設定已儲存成功！');
-        // 重新載入設定以確保同步
-        loadSettings();
-      } else {
-        throw new Error(result.error || '儲存失敗');
-      }
-    } catch (error: any) {
-      console.error('儲存設定失敗:', error);
-      alert('儲存設定失敗: ' + error.message);
+    } catch (e) {
+      console.error('載入設備名稱失敗:', e);
     }
   };
+
+  useEffect(() => {
+    fetchDeviceNameFromMqtt();
+  }, []);
 
   // 回復原廠設定
   const handleResetSettings = async () => {
@@ -143,10 +71,16 @@ export default function OperationPanel() {
 
       // 直接呼叫新的 POST /api/settings/factory API
       const clientId = sessionStorage.getItem('mqttClientId');
+      const plugId = sessionStorage.getItem('plugId') || '';
+      if (!clientId || !plugId) {
+        alert('缺少連線資訊，請重新登入');
+        return;
+      }
+
       const response = await fetch('/api/settings/factory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientId })
+        body: JSON.stringify({ clientId, plugId })
       });
 
       const result = await response.json();
@@ -157,8 +91,11 @@ export default function OperationPanel() {
         // 顯示成功訊息
         alert('原廠設定已成功回復！\n設備名稱和繼電器名稱已更新。');
 
-        // 重新載入設定頁面
-        loadSettings();
+        if (result.broadcast?.plugName) {
+          setDeviceName(result.broadcast.plugName);
+        } else {
+          fetchDeviceNameFromMqtt();
+        }
 
         // 更新繼電器名稱為原廠預設值 (Relay 1 ~ Relay 6)
         // 這些更新會透過 WebSocket 自動接收，但為了確保即時性，我們也手動更新
@@ -189,14 +126,6 @@ export default function OperationPanel() {
       console.error('❌ 回復原廠設定失敗:', error);
       alert('回復原廠設定失敗: ' + error.message);
     }
-  };
-
-  // 處理輸入變化
-  const handleInputChange = (field: string, value: string) => {
-    setSystemSettings(prev => ({
-      ...prev,
-      [field]: value
-    }));
   };
 
   // WebSocket 連線
@@ -277,8 +206,9 @@ export default function OperationPanel() {
     ws.onopen = () => {
       console.log('✅ WebSocket 連接已成功建立');
       setMqttConnected(true);
-      // 重設設備狀態為 unknown，等待 server.js 轉發 retained live 訊息
       setDeviceStatus('unknown');
+      sendCommand('get_sensors');
+      fetchDeviceNameFromMqtt();
     };
 
     ws.onmessage = (event) => {
@@ -351,7 +281,9 @@ export default function OperationPanel() {
         break;
 
       case 'plug_name_updated':
-        setSystemSettings(prev => ({ ...prev, plugName: data.plugName }));
+        if (data.plugName && String(data.plugName).trim() !== '') {
+          setDeviceName(String(data.plugName).trim());
+        }
         break;
 
       // ── ESP32 設備在線狀態（LWT 機制） ──
@@ -451,10 +383,11 @@ export default function OperationPanel() {
     if (confirm('確定要登出系統嗎?')) {
       try {
         const clientId = sessionStorage.getItem('mqttClientId');
+        const plugId = sessionStorage.getItem('plugId') || '';
         await fetch('/api/logout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ clientId })
+          body: JSON.stringify({ clientId, plugId })
         });
         if (wsRef.current) {
           wsRef.current.close();
@@ -526,12 +459,20 @@ export default function OperationPanel() {
 
       {/* 主內容區 */}
       <div className="flex-1 p-4 pb-24 overflow-y-auto overflow-x-hidden">
+        <div className="max-w-4xl mx-auto mb-4 text-center">
+          {currentPage === 'home' ? (
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">智能家居遠控面板</h2>
+          ) : (
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">溫度記錄</h2>
+          )}
+          <div className="inline-block bg-white rounded-lg shadow-sm border border-gray-200 px-5 py-2 min-w-[200px]">
+            <p className="text-xs text-gray-500 mb-0.5">設備名稱</p>
+            <p className="text-lg font-semibold text-gray-800">{deviceName}</p>
+          </div>
+        </div>
+
         {currentPage === 'home' && (
           <div className="max-w-4xl mx-auto">
-            <h2 className="text-2xl font-bold text-center text-gray-800 mb-4">
-              智能家居遠控面板
-            </h2>
-
             {/* 溫度顯示 */}
             <div className="bg-white rounded-lg shadow-md p-4 text-center mb-6 max-w-sm mx-auto">
               <div className="text-xl font-bold text-gray-700">
@@ -602,155 +543,6 @@ export default function OperationPanel() {
           <TemperatureRecordPanel />
         )}
 
-        {currentPage === 'system-settings' && (
-          <div className="w-full max-w-6xl mx-auto px-2 sm:px-4 lg:px-6">
-            <h2 className="text-2xl sm:text-3xl font-bold text-center text-gray-800 mb-4 sm:mb-6">
-              智能家居遙控面板設定
-            </h2>
-            <div className="bg-white rounded-lg sm:rounded-xl shadow-lg p-4 sm:p-6 lg:p-8">
-              <form id="settings-form" className="space-y-6">
-                {/* 插座名稱和登錄密碼 - 在較大屏幕上並排 */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2 text-sm sm:text-base">
-                      插座名稱：
-                    </label>
-                    <input
-                      type="text"
-                      id="plugName"
-                      maxLength={10}
-                      value={systemSettings.plugName}
-                      onChange={(e) => handleInputChange('plugName', e.target.value)}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm sm:text-base"
-                      placeholder="最多10字"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2 text-sm sm:text-base">
-                      登錄密碼：
-                    </label>
-                    <input
-                      type="password"
-                      id="loginPassword"
-                      value={systemSettings.loginPassword}
-                      onChange={(e) => handleInputChange('loginPassword', e.target.value)}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm sm:text-base"
-                      placeholder="空白表示不修改"
-                    />
-                  </div>
-                </div>
-
-                {/* MQTT 設定 */}
-                <div className="space-y-4 sm:space-y-6">
-                  <h3 className="text-lg sm:text-xl font-semibold text-gray-800">MQTT 連線設定</h3>
-
-                  {/* MQTT Broker - 單獨一行 */}
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2 text-sm sm:text-base">
-                      MQTT Broker：
-                    </label>
-                    <input
-                      type="text"
-                      id="mqttBroker"
-                      value={systemSettings.mqttBroker}
-                      onChange={(e) => handleInputChange('mqttBroker', e.target.value)}
-                      className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm sm:text-base"
-                      placeholder="Broker.emqx.io"
-                    />
-                  </div>
-
-                  {/* MQTT Port 和 ClientID - 在較大屏幕上並排 */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    <div>
-                      <label className="block text-gray-700 font-medium mb-2 text-sm sm:text-base">
-                        MQTT Port：
-                      </label>
-                      <input
-                        type="text"
-                        id="mqttPort"
-                        value={systemSettings.mqttPort}
-                        onChange={(e) => handleInputChange('mqttPort', e.target.value)}
-                        className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm sm:text-base"
-                        placeholder="8083"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 font-medium mb-2 text-sm sm:text-base">
-                        MQTT ClientID：
-                      </label>
-                      <input
-                        type="text"
-                        id="mqttClientId"
-                        value={systemSettings.mqttClientId}
-                        onChange={(e) => handleInputChange('mqttClientId', e.target.value)}
-                        className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm sm:text-base"
-                        placeholder="user123456"
-                      />
-                    </div>
-                  </div>
-
-                  {/* MQTT User 和 Pwd - 在較大屏幕上並排 */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                    <div>
-                      <label className="block text-gray-700 font-medium mb-2 text-sm sm:text-base">
-                        MQTT User：
-                      </label>
-                      <input
-                        type="text"
-                        id="mqttUser"
-                        value={systemSettings.mqttUser}
-                        onChange={(e) => handleInputChange('mqttUser', e.target.value)}
-                        className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm sm:text-base"
-                        placeholder="選填"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-gray-700 font-medium mb-2 text-sm sm:text-base">
-                        MQTT Pwd：
-                      </label>
-                      <input
-                        type="password"
-                        id="mqttPwd"
-                        value={systemSettings.mqttPwd}
-                        onChange={(e) => handleInputChange('mqttPwd', e.target.value)}
-                        className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm sm:text-base"
-                        placeholder="選填"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 按鈕區域 - 響應式調整 */}
-                <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 pt-4 sm:pt-6">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage('home')}
-                    className="flex-1 min-w-[140px] px-4 py-3 sm:px-6 sm:py-3 bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-medium transition-colors text-sm sm:text-base"
-                  >
-                    回上一頁
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleResetSettings}
-                    className="flex-1 min-w-[140px] px-4 py-3 sm:px-6 sm:py-3 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition-colors text-sm sm:text-base"
-                  >
-                    回復原廠設定
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSaveSettings}
-                    className="flex-1 min-w-[140px] px-4 py-3 sm:px-6 sm:py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors text-sm sm:text-base"
-                  >
-                    儲存設定
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 底部導航欄 */}
@@ -775,13 +567,10 @@ export default function OperationPanel() {
             溫度記錄
           </button>
           <button
-            onClick={() => setCurrentPage('system-settings')}
-            className={`px-3 py-3 rounded-xl font-bold text-xs md:text-sm uppercase tracking-wider transition-all ${currentPage === 'system-settings'
-              ? 'bg-white text-indigo-600 shadow-lg'
-              : 'bg-transparent text-white border-2 border-white hover:bg-white/10'
-              }`}
+            onClick={handleResetSettings}
+            className="px-3 py-3 rounded-xl font-bold text-xs md:text-sm uppercase tracking-wider bg-transparent text-white border-2 border-yellow-300 hover:bg-yellow-500/20 transition-all"
           >
-            系統設定
+            回復原廠設定
           </button>
           <button
             onClick={handleLogout}

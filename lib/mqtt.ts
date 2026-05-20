@@ -102,10 +102,9 @@ interface MqttConfig {
   password?: string;
 }
 
-/**
- * 客戶端初始化標記，確保訊息處理器只設置一次
- */
-let isHandlerInited = false;
+/** HMR 重載時模組變數會重置，須用 global 避免重複註冊監聽導致 OOM */
+const HANDLER_INIT_KEY = Symbol.for('smartplug.mqtt.handlerInited');
+const HANDLER_FN_KEY = Symbol.for('smartplug.mqtt.handlerFn');
 
 /**
  * 初始化共享 MQTT 訊息處理器
@@ -113,11 +112,16 @@ let isHandlerInited = false;
  * 此處僅保留基礎的主題監聽，且使用 clientId 作為上下文
  */
 function initSharedHandlers() {
-  if (isHandlerInited) return;
-  isHandlerInited = true;
+  if ((global as any)[HANDLER_INIT_KEY]) return;
 
-  // 接收訊息時，根據 clientId 更新對應的快取
-  mqttShared.on('message', (topic: string, message: Buffer, clientId: string) => {
+  const previous = (global as any)[HANDLER_FN_KEY] as
+    | ((topic: string, message: Buffer, clientId: string) => void)
+    | undefined;
+  if (previous) {
+    mqttShared.removeListener('message', previous);
+  }
+
+  const handler = (topic: string, message: Buffer, clientId: string) => {
     try {
       const msgString = message.toString();
       const cache = getOrCreateCache(clientId);
@@ -142,7 +146,9 @@ function initSharedHandlers() {
         }
 
         cache.voltage = Number(parsedVoltage) || 0;
-        console.log(`📊 [Lib] [${clientId}] 電壓更新: ${cache.voltage}V (Raw: ${msgString})`);
+        if (process.env.MQTT_VERBOSE === '1') {
+          console.log(`📊 [Lib] [${clientId}] 電壓更新: ${cache.voltage}V (Raw: ${msgString})`);
+        }
       }
       // 插座名稱解析
       else if (topic.endsWith('/plugName')) {
@@ -152,7 +158,9 @@ function initSharedHandlers() {
         } catch (e) {
           cache.plugName = msgString;
         }
-        console.log(`🏷️ [Lib] [${clientId}] 插座名稱更新: ${cache.plugName}`);
+        if (process.env.MQTT_VERBOSE === '1') {
+          console.log(`🏷️ [Lib] [${clientId}] 插座名稱更新: ${cache.plugName}`);
+        }
       }
       // 處理 announce 回應
       else if (topic.includes('/announce')) {
@@ -174,14 +182,20 @@ function initSharedHandlers() {
               cache.espRegistered = Boolean(payload.registered);
               console.log(`🔑 [Lib] [${clientId}] ESP32 Announce 回應: registered=${cache.espRegistered}`);
             }
-            console.log(`✅ [Lib] [${clientId}] 自 announce 更新數據: ${cache.voltage}V, ${cache.plugName} (Raw: ${msgString})`);
+            if (process.env.MQTT_VERBOSE === '1') {
+              console.log(`✅ [Lib] [${clientId}] 自 announce 更新數據: ${cache.voltage}V, ${cache.plugName} (Raw: ${msgString})`);
+            }
           } catch (e) { }
         }
       }
     } catch (e) {
       console.error('❌ [Lib] 訊息處理錯誤:', e);
     }
-  });
+  };
+
+  (global as any)[HANDLER_FN_KEY] = handler;
+  (global as any)[HANDLER_INIT_KEY] = true;
+  mqttShared.on('message', handler);
 }
 
 // 預先啟動監聽器
@@ -215,13 +229,14 @@ export async function connectMqtt(config: MqttConfig): Promise<{ success: boolea
         setOperationPlugId(currentPlugId);
         setOperationMqttClient(client, config.clientId);
 
-        // 訂閱基礎主題
-        const vTopic = MqttTopics.voltage(currentPlugId);
-        const nTopic = MqttTopics.plugName(currentPlugId);
-        const announceResponseTopic = MqttTopics.announceResponse(currentPlugId, currentClientId);
-
-        client.subscribe([vTopic, nTopic, announceResponseTopic], { qos: 1 });
-        console.log(`📡 [Lib] 已訂閱基礎資訊與回應主題`);
+        // 每位使用者只訂閱一次 smartplug/{plugId}/#（含 announce / voltage / live，避免與單一主題重疊造成雙送）
+        mqttShared.ensurePlugWildcardSubscription(currentClientId, currentPlugId, (err) => {
+          if (err) {
+            console.warn(`📡 [Lib] [${currentClientId}] plug # 訂閱失敗，操作頁 WS 將重試:`, err.message);
+          } else {
+            console.log(`📡 [Lib] [${currentClientId}] 已訂閱 smartplug/${currentPlugId}/#`);
+          }
+        });
 
         // 延遲發送初始化命令
         setTimeout(() => {
@@ -326,33 +341,17 @@ export function getClientId(): string {
   return currentClientId;
 }
 
-// 發送離線通知
-export function sendOfflineNotification(clientId?: string): boolean {
-  if (!clientId) return false;
-  const client = mqttShared.getClient(clientId);
-  if (!client || !client.connected) return false;
-
-  try {
-    const offlineTopic = MqttTopics.offline(currentPlugId, clientId);
-    const offlinePayload = JSON.stringify({
-      clientId: clientId,
-      plugId: currentPlugId,
-      reason: "manual_logout",
-      timestamp: Date.now()
-    });
-
-    client.publish(offlineTopic, offlinePayload, { qos: 1 });
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
-
-// 斷開 MQTT 連線
-export function disconnectMqtt(clientId?: string): void {
+// 斷開 MQTT 連線並清理快取（登出 / 逾時清理共用）
+export function disconnectMqtt(clientId?: string, plugId?: string): void {
   if (!clientId) return;
-  sendOfflineNotification(clientId);
-  mqttShared.disconnect(clientId);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { purgeClientSession } = require('./client-session');
+  const resolvedPlugId = plugId || mqttShared.getPlugId(clientId) || currentPlugId;
+  purgeClientSession(clientId, {
+    publishOffline: true,
+    plugId: resolvedPlugId,
+    reason: 'manual_logout',
+  });
 }
 
 // PlugID 驗證函數 (供其他模組使用)

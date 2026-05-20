@@ -48,21 +48,9 @@ export function setPlugId(plugId: string) {
   console.log(`✅ [Operation] PlugID 已設置為: ${currentPlugId}`);
 }
 
-// 設置 MQTT 客戶端 (相容舊介面，但現在主要由 Shared 管理)
-export function setMqttClient(client: any, clientId: string) {
+// 設置 MQTT 客戶端（僅更新操作上下文；MQTT 廣播由 server.js 統一處理，不在此註冊監聽）
+export function setMqttClient(_client: any, clientId: string) {
   currentClientId = clientId;
-  initSharedHandlers();
-}
-
-let isOperationHandlerInited = false;
-function initSharedHandlers() {
-  if (isOperationHandlerInited) return;
-  isOperationHandlerInited = true;
-
-  // 在多使用者架構中，訊息同步主要由 server.js 處理廣播
-  // 此處保留此處理器是為了相容部分 API 呼叫，但改為監聽 global_message 以獲取 clientId
-  mqttShared.on('global_message', handleMqttMessage);
-  console.log('✅ [Operation] Shared 全域訊息監聽已啟動');
 }
 
 // MQTT 主題定義
@@ -354,11 +342,9 @@ export function handleWsMessage(message: string, client: CustomWebSocket, client
   } catch (e) { }
 }
 
-// 設置回調
-export function onMqttMessage(callback: (topic: string, message: string) => void) {
-  mqttShared.on('message', (topic: string, message: Buffer) => {
-    callback(topic, message.toString());
-  });
+/** @deprecated MQTT 訊息由 server.js 處理，請勿再註冊監聽 */
+export function onMqttMessage(_callback: (topic: string, message: string) => void) {
+  // 刻意不註冊，避免與 server.js 重複監聽造成記憶體累積
 }
 
 // WebSocket 類型預定義 (由於檔案內已有引用，需在此補全或移到頂部)

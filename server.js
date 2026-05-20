@@ -21,6 +21,7 @@ const handle = app.getRequestHandler();
 // MQTT 配置 (由 lib/mqtt-shared 管理)
 // ==========================================
 const mqttShared = require('./lib/mqtt-shared');
+const { purgeClientSession } = require('./lib/client-session');
 
 // 用來追蹤已訂閱的 plugID，避免重複訂閱
 const subscribedPlugs = new Set();
@@ -36,6 +37,13 @@ global[Symbol.for('smartplug.wsClients')] = wsClients;
 // 未登出清理計時器：WS 斷開後 30 秒內若未重連，清理 MQTT 連線並通知 ESP32
 const clientCleanupTimers = new Map(); // clientId -> { timer, plugId }
 const CLEANUP_DELAY_MS = 30 * 1000;
+
+global[Symbol.for('smartplug.onSessionPurged')] = (clientId) => {
+    if (clientCleanupTimers.has(clientId)) {
+        clearTimeout(clientCleanupTimers.get(clientId).timer);
+        clientCleanupTimers.delete(clientId);
+    }
+};
 
 // ESP32 設備在線狀態追蹤
 // 'unknown' = 尚未收到 live 訊息；'online' = 在線；'offline' = 離線；'reconnecting' = 重啟同步中
@@ -77,21 +85,23 @@ mqttShared.on('statusChange', (clientId, status) => {
     }
 });
 
-// 重啟或連線後為該 Client 訂閱其對應的 PlugID
+// MQTT 重連且 WS 仍在：補訂閱 plug wildcard（內部會去重，不重複 subscribe）
 mqttShared.on('connect', (clientId) => {
     const wsInfo = wsClients.get(clientId);
-    if (!wsInfo) return;
-
-    const mqttClient = mqttShared.getClient(clientId);
-    if (!mqttClient) return;
-
-    const topic = `smartplug/${wsInfo.plugId}/#`;
-    mqttClient.subscribe(topic);
-    console.log(`📡 [Shared-Sub] [${clientId}] 訂閱: ${topic}`);
+    if (!wsInfo?.plugId) return;
+    mqttShared.ensurePlugWildcardSubscription(clientId, wsInfo.plugId, (err) => {
+        if (!err) {
+            console.log(`📡 [Shared-Sub] [${clientId}] 訂閱: smartplug/${wsInfo.plugId}/#`);
+        }
+    });
 });
 
 // 全域訊息同步：當任何一個 MQTT 連線收到 plugId 的狀態更新，同步給所有關注該 plugId 的 WS
-mqttShared.on('global_message', (topic, message, sourceClientId) => {
+const SERVER_GLOBAL_MSG_KEY = Symbol.for('smartplug.server.globalMessage');
+if (global[SERVER_GLOBAL_MSG_KEY]) {
+    mqttShared.removeListener('global_message', global[SERVER_GLOBAL_MSG_KEY]);
+}
+const onGlobalMessage = (topic, message, sourceClientId) => {
     // 解析主題獲取 plugId
     const parts = topic.split('/');
     if (parts.length < 2) return;
@@ -306,12 +316,18 @@ mqttShared.on('global_message', (topic, message, sourceClientId) => {
             }
         } catch (e) { }
     }
-});
+};
+global[SERVER_GLOBAL_MSG_KEY] = onGlobalMessage;
+mqttShared.on('global_message', onGlobalMessage);
 
 // ==========================================
 // 處理 MQTT 收到的訊息 (ESP32 -> Server -> UI)
 // ==========================================
-mqttShared.on('message', (topic, message) => {
+const SERVER_MESSAGE_KEY = Symbol.for('smartplug.server.message');
+if (global[SERVER_MESSAGE_KEY]) {
+    mqttShared.removeListener('message', global[SERVER_MESSAGE_KEY]);
+}
+const onMqttMessage = (topic, message) => {
     try {
         const msgString = message.toString();
         const parts = topic.split('/');
@@ -391,7 +407,9 @@ mqttShared.on('message', (topic, message) => {
     } catch (e) {
         // console.error(`解析 MQTT 訊息失敗 [${topic}]:`, e.message);
     }
-});
+};
+global[SERVER_MESSAGE_KEY] = onMqttMessage;
+mqttShared.on('message', onMqttMessage);
 
 // 廣播給特定 PlugID 的所有連線者
 function broadcastToPlug(plugId, data) {
@@ -569,9 +587,8 @@ app.prepare().then(async () => {
             const mqttClient = mqttShared.getClient(clientId);
 
             if (mqttClient && mqttClient.connected) {
-                // 如果已連線，確保訂閱了該 plugId（含 live 主題）
-                const topic = `smartplug/${plugId}/#`;
-                mqttClient.subscribe(topic, (err) => {
+                mqttShared.ensurePlugWildcardSubscription(clientId, plugId, (err) => {
+                    const topic = `smartplug/${plugId}/#`;
                     if (err) {
                         console.error(`❌ [WS] [${clientId}] 訂閱失敗: ${topic}`, err.message);
                     } else {
@@ -635,25 +652,12 @@ app.prepare().then(async () => {
                 }
                 const cleanupTimer = setTimeout(() => {
                     clientCleanupTimers.delete(clientId);
-                    const mqttClient = mqttShared.getClient(clientId);
-                    if (mqttClient && mqttClient.connected) {
-                        // 發送離線通知給 ESP32（讓 ESP32 取消訂閱此 clientId 的主題）
-                        const offlineTopic = `smartplug/${plugId}/${clientId}/offline`;
-                        const offlinePayload = JSON.stringify({
-                            clientId,
-                            plugId,
-                            reason: 'browser_closed',
-                            timestamp: Date.now()
-                        });
-                        mqttClient.publish(offlineTopic, offlinePayload, { qos: 1 }, () => {
-                            mqttShared.disconnect(clientId);
-                            console.log(`🧹 [Cleanup] [${clientId}] 30 秒未重連，MQTT 已清理，ESP32 已通知`);
-                        });
-                    } else {
-                        // MQTT 已不存在，直接移除殘留記錄
-                        mqttShared.disconnect(clientId);
-                        console.log(`🧹 [Cleanup] [${clientId}] 30 秒未重連，殘留記錄已清理`);
-                    }
+                    purgeClientSession(clientId, {
+                        publishOffline: true,
+                        plugId,
+                        reason: 'browser_closed',
+                    });
+                    console.log(`🧹 [Cleanup] [${clientId}] 30 秒未重連，MQTT 與快取已清理`);
                 }, CLEANUP_DELAY_MS);
 
                 clientCleanupTimers.set(clientId, { timer: cleanupTimer, plugId });

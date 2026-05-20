@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
-import { getMqttClient, getClientId } from '@/lib/mqtt';
+import { getMqttClient, getClientId, MqttTopics } from '@/lib/mqtt';
 import { updateRelayName, getMqttClient as getOperationMqttClient } from '@/lib/mqtt-operation';
+import { updateLoginPasswordByPlugId } from '@/lib/registry-db';
+import { DEFAULT_DEVICE_LOGIN_PASSWORD } from '@/lib/mqtt-defaults';
 
 const FACTORY_SETTINGS_PATH = path.join(process.cwd(), 'data', 'setting.factory.json');
 const SETTINGS_PATH = path.join(process.cwd(), 'data', 'setting.json');
@@ -25,37 +27,40 @@ export async function GET() {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const { clientId } = body;
-        console.log(`🔄 [${clientId}] 開始執行回復原廠設定...`);
+        const { clientId, plugId } = body;
 
-        // 1. 讀取原廠設定檔案
+        if (!clientId || !plugId) {
+            return NextResponse.json(
+                { success: false, error: '缺少 clientId 或 plugId（請由當前連線 session 提供）' },
+                { status: 400 }
+            );
+        }
+
+        console.log(`🔄 [${clientId}] 回復原廠設定 (Plug: ${plugId})...`);
+
         const factoryData = await fs.readFile(FACTORY_SETTINGS_PATH, 'utf-8');
         const factorySettings = JSON.parse(factoryData);
 
-        // 2. 讀取當前設定檔案以保留 plugId
-        let currentSettings: any = {};
+        await fs.writeFile(SETTINGS_PATH, JSON.stringify(factorySettings, null, 4), 'utf-8');
+        await fs.writeFile(PUBLIC_SETTINGS_PATH, JSON.stringify(factorySettings, null, 4), 'utf-8');
+
+        console.log('💾 本機 UI 範本設定已回復（plugId／登入密碼由 session／中央資料庫管理）');
+
+        // ── 同步重設登入密碼至中央資料庫（依 plugId） ──
+        let dbPasswordUpdated = false;
         try {
-            const currentData = await fs.readFile(SETTINGS_PATH, 'utf-8');
-            currentSettings = JSON.parse(currentData);
-        } catch (error) {
-            console.warn('無法讀取當前設定檔案，將使用原廠設定:', error);
+            dbPasswordUpdated = await updateLoginPasswordByPlugId(
+                plugId,
+                DEFAULT_DEVICE_LOGIN_PASSWORD
+            );
+            if (dbPasswordUpdated) {
+                console.log(`🔑 [Registry] 已將 plugId=${plugId} 的登入密碼重設為預設值`);
+            } else {
+                console.warn(`⚠️ [Registry] 未找到 plugId=${plugId}，登入密碼未更新`);
+            }
+        } catch (err: any) {
+            console.error('❌ 中央資料庫密碼更新失敗:', err.message);
         }
-
-        // 3. 合併設定：使用原廠設定，但保留現有的 plugId
-        const mergedSettings = {
-            ...factorySettings,
-            plugId: currentSettings.plugId || 'sp123456' // 保留現有 plugId，如無則使用預設
-        };
-
-        console.log('📋 合併後的設定:', JSON.stringify(mergedSettings, null, 2));
-
-        // 4. 寫入 setting.json
-        await fs.writeFile(SETTINGS_PATH, JSON.stringify(mergedSettings, null, 4), 'utf-8');
-
-        // 5. 同時寫入 public/data/setting.json (供前端讀取)
-        await fs.writeFile(PUBLIC_SETTINGS_PATH, JSON.stringify(mergedSettings, null, 4), 'utf-8');
-
-        console.log('💾 設定檔案已更新');
 
         // 6. 檢查 MQTT 連線狀態
         const mqttClient = getMqttClient(clientId);
@@ -66,17 +71,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({
                 success: true,
                 message: '原廠設定已回復，但 MQTT 未連線，無法發送廣播訊息',
-                settings: mergedSettings
+                settings: factorySettings
             });
         }
 
         // 7. 獲取 Plug ID
-        const plugId = mergedSettings.plugId || 'defaultPlug';
-
         console.log(`📤 準備發送 MQTT 廣播: PlugID=${plugId}, ClientID=${clientId}`);
 
-        // 8. 發送 plugName 廣播
-        const plugName = mergedSettings.plugName || 'SmartPlug';
+        const plugName = factorySettings.plugName || 'SmartPlug';
         const plugNameTopic = `smartplug/${plugId}/plugName`;
         const plugNamePayload = JSON.stringify({ plugName });
 
@@ -84,7 +86,7 @@ export async function POST(request: NextRequest) {
         console.log(`📤 已發送設備名稱廣播: ${plugNameTopic} -> ${plugNamePayload}`);
 
         // 9. 發送繼電器名稱廣播 (Relay 1 ~ Relay 6)
-        const relayNames = mergedSettings.relayNames || {
+        const relayNames = factorySettings.relayNames || {
             relay1: "Relay 1",
             relay2: "Relay 2",
             relay3: "Relay 3",
@@ -132,15 +134,25 @@ export async function POST(request: NextRequest) {
             console.log(`✅ 已發送繼電器 ${i} 關閉指令: ${controlTopic}`);
         }
 
+        // 11. 透過 MQTT 通知 ESP32 同步 NVS 登入密碼為預設值
+        const passwordResetTopic = MqttTopics.request(plugId, clientId);
+        const passwordResetPayload = JSON.stringify({
+            type: 'setLoginPassword',
+            password: DEFAULT_DEVICE_LOGIN_PASSWORD,
+        });
+        mqttClient.publish(passwordResetTopic, passwordResetPayload, { qos: 1 });
+        console.log(`🔑 已透過 MQTT 通知 ESP32 重設 NVS 登入密碼為預設值`);
+
         console.log('✅ 所有廣播與關閉指令已發送完成');
 
         return NextResponse.json({
             success: true,
             message: '原廠設定已成功回復並廣播',
-            settings: mergedSettings,
+            settings: factorySettings,
             broadcast: {
                 plugName: plugName,
-                relayNames: relayNames
+                relayNames: relayNames,
+                loginPasswordReset: dbPasswordUpdated,
             }
         });
 
