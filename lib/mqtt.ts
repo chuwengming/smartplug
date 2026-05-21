@@ -230,7 +230,7 @@ export async function connectMqtt(config: MqttConfig): Promise<{ success: boolea
         setOperationMqttClient(client, config.clientId);
 
         // 每位使用者只訂閱一次 smartplug/{plugId}/#（含 announce / voltage / live，避免與單一主題重疊造成雙送）
-        mqttShared.ensurePlugWildcardSubscription(currentClientId, currentPlugId, (err) => {
+        mqttShared.ensurePlugWildcardSubscription(currentClientId, currentPlugId, (err: Error | null) => {
           if (err) {
             console.warn(`📡 [Lib] [${currentClientId}] plug # 訂閱失敗，操作頁 WS 將重試:`, err.message);
           } else {
