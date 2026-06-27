@@ -31,8 +31,8 @@ export async function getLoginPasswordByPlugId(plugId: string): Promise<string |
     if (!pool) return null;
 
     const [rows]: any = await pool.execute(
-        'SELECT login_password FROM plug_registry WHERE plug_id = ?',
-        [plugId]
+        'SELECT login_password FROM plug_registry WHERE LOWER(plug_id) = LOWER(?)',
+        [plugId.trim()]
     );
 
     if (!rows.length) return null;
@@ -77,13 +77,19 @@ export async function markPlugIdAssignedByFactorySerial(
 export async function updateLoginPasswordByPlugId(
     plugId: string,
     loginPassword: string
-): Promise<boolean> {
-    if (!pool) return false;
+): Promise<'updated' | 'no_database' | 'not_found'> {
+    if (!pool) return 'no_database';
+
+    const normalizedPlugId = plugId.trim();
 
     const [result]: any = await pool.execute(
-        'UPDATE plug_registry SET login_password = ?, updated_at = CURRENT_TIMESTAMP WHERE plug_id = ?',
-        [loginPassword, plugId]
+        'UPDATE plug_registry SET login_password = ?, updated_at = CURRENT_TIMESTAMP WHERE LOWER(plug_id) = LOWER(?)',
+        [loginPassword, normalizedPlugId]
     );
 
-    return result.affectedRows > 0;
+    if (result.affectedRows > 0) {
+        return 'updated';
+    }
+
+    return 'not_found';
 }

@@ -45,6 +45,22 @@ interface FileListResponse {
   message: string;
 }
 
+interface LoggerStatusResponse {
+  success: boolean;
+  active: boolean;
+  recordingPaused: boolean;
+  pauseReason: string | null;
+  pauseReasonText: string | null;
+  recordingStatusText: string;
+  lastRecordTime: string | null;
+  lastRecordTimeFormatted: string | null;
+  lastTemperature: number | null;
+  intervalMinutes: number;
+  mqttConnectedCount: number;
+  lastMqttTemperatureAt: string | null;
+  lastMqttTemperatureAtFormatted: string | null;
+}
+
 export default function TemperatureRecordPanel() {
   // 狀態管理
   const [selectedFile, setSelectedFile] = useState<string>('');
@@ -57,10 +73,31 @@ export default function TemperatureRecordPanel() {
   });
   const [error, setError] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string>('');
+  const [loggerStatus, setLoggerStatus] = useState<LoggerStatusResponse | null>(null);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
 
-  // 加載可用檔案列表
+  const loadLoggerStatus = async () => {
+    setIsLoadingStatus(true);
+    try {
+      const response = await fetch('/api/temperature-log/status');
+      const data: LoggerStatusResponse = await response.json();
+      if (data.success) {
+        setLoggerStatus(data);
+      }
+    } catch (e) {
+      console.error('載入記錄狀態失敗:', e);
+    } finally {
+      setIsLoadingStatus(false);
+    }
+  };
+
+  // 加載可用檔案列表與記錄器狀態
   useEffect(() => {
     loadAvailableFiles();
+    loadLoggerStatus();
+
+    const timer = setInterval(loadLoggerStatus, 60 * 1000);
+    return () => clearInterval(timer);
   }, []);
 
   // 載入可用檔案列表
@@ -101,6 +138,7 @@ export default function TemperatureRecordPanel() {
       if (data.success) {
         setTodayRecords(data.records);
         setSuccessMessage(`已載入 ${data.records.length} 筆今日溫度記錄`);
+        loadLoggerStatus();
       } else {
         setError(`無法載入今日記錄: ${data.message}`);
         setTodayRecords([]);
@@ -211,12 +249,69 @@ export default function TemperatureRecordPanel() {
     );
   };
 
+  const renderLoggerStatusBanner = () => {
+    if (!loggerStatus && isLoadingStatus) {
+      return (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-4 text-sm text-gray-600">
+          載入記錄狀態中…
+        </div>
+      );
+    }
+
+    if (!loggerStatus) return null;
+
+    const isPaused = loggerStatus.recordingPaused;
+    const boxClass = isPaused
+      ? 'bg-amber-50 border-amber-200 text-amber-900'
+      : 'bg-green-50 border-green-200 text-green-900';
+
+    return (
+      <div className={`border rounded-lg px-4 py-3 mb-4 ${boxClass}`}>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="font-semibold">
+            {isPaused ? '⏸️ 記錄狀態：暫停寫入' : '✅ 記錄狀態：正常記錄中'}
+          </div>
+          <button
+            type="button"
+            onClick={loadLoggerStatus}
+            disabled={isLoadingStatus}
+            className="text-sm underline hover:no-underline disabled:opacity-50 self-start sm:self-auto"
+          >
+            {isLoadingStatus ? '更新中…' : '重新整理狀態'}
+          </button>
+        </div>
+        <div className="mt-2 text-sm space-y-1">
+          {isPaused && loggerStatus.pauseReasonText && (
+            <p>原因：{loggerStatus.pauseReasonText}</p>
+          )}
+          <p>
+            最後寫入：
+            {loggerStatus.lastRecordTimeFormatted
+              ? ` ${loggerStatus.lastRecordTimeFormatted}`
+              : ' 尚無紀錄'}
+            {loggerStatus.lastTemperature != null && (
+              <span>（{loggerStatus.lastTemperature.toFixed(1)}°C）</span>
+            )}
+          </p>
+          <p>
+            MQTT 連線數：{loggerStatus.mqttConnectedCount}
+            {loggerStatus.lastMqttTemperatureAtFormatted && (
+              <span> · 最近 MQTT 溫度：{loggerStatus.lastMqttTemperatureAtFormatted}</span>
+            )}
+          </p>
+          <p>記錄間隔：每 {loggerStatus.intervalMinutes || 30} 分鐘</p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
         溫度記錄管理
       </h2>
-      
+
+      {renderLoggerStatusBanner()}
       {/* 錯誤和成功訊息 */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
@@ -324,7 +419,8 @@ export default function TemperatureRecordPanel() {
           <div className="flex items-start">
             <span className="text-blue-500 mr-2">ℹ️</span>
             <div>
-              <p>• 溫度記錄每30分鐘自動記錄一次</p>
+              <p>• 溫度記錄每30分鐘自動記錄一次（需有 MQTT 連線且收到有效溫度）</p>
+              <p>• 無 MQTT 連線或溫度資料時，暫停寫入檔案</p>
               <p>• 記錄格式：日期 時間 溫度（°C）</p>
               <p>• 每週循環記錄，每天對應一個檔案</p>
               <p>• 新的一天開始時會自動清空舊記錄</p>
@@ -339,8 +435,9 @@ export default function TemperatureRecordPanel() {
         <ol className="list-decimal list-inside space-y-1 text-yellow-700">
           <li>從下拉選單選擇要下載的星期檔案</li>
           <li>點擊「下載檔案」將記錄儲存到手機或電腦</li>
+          <li>上方狀態列顯示最後記錄時間與是否暫停寫入</li>
           <li>點擊「顯示紀錄」查看今日的溫度記錄</li>
-          <li>溫度記錄會自動每30分鐘更新一次</li>
+          <li>有 MQTT 連線時，溫度記錄每30分鐘更新一次</li>
         </ol>
       </div>
     </div>

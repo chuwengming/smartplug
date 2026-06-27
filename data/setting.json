@@ -2,7 +2,7 @@
     "mqtt": {
         "broker": "s4eb1262.ala.cn-hangzhou.emqxsl.cn",
         "port": "8883",
-        "clientId": "",
+        "clientId": "user112233",
         "username": "chuwm",
         "password": "chuwengming"
     },
@@ -14,5 +14,6 @@
         "relay4": "Relay 4",
         "relay5": "Relay 5",
         "relay6": "Relay 6"
-    }
+    },
+    "plugId": "sp482966"
 }

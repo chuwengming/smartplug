@@ -60,14 +60,14 @@ export default function OperationPanel() {
     fetchDeviceNameFromMqtt();
   }, []);
 
-  // 回復原廠設定
+  // 重置設備設定
   const handleResetSettings = async () => {
-    if (!confirm('確定要回復原廠設定嗎？這將會重置所有設定為預設值，包括設備名稱和繼電器名稱。')) {
+    if (!confirm('確定要重置設備設定嗎？密碼將回復為 123456，繼電器全部關閉，名稱回歸預設；PlugID 與 ClientID 將保留。')) {
       return;
     }
 
     try {
-      console.log('🔄 開始回復原廠設定...');
+      console.log('🔄 開始重置設備設定...');
 
       // 直接呼叫新的 POST /api/settings/factory API
       const clientId = sessionStorage.getItem('mqttClientId');
@@ -86,10 +86,10 @@ export default function OperationPanel() {
       const result = await response.json();
 
       if (response.ok && result.success) {
-        console.log('✅ 原廠設定回復成功:', result);
+        console.log('✅ 設備設定重置成功:', result);
 
         // 顯示成功訊息
-        alert('原廠設定已成功回復！\n設備名稱和繼電器名稱已更新。');
+        alert('設備設定已重置！\n密碼已回復為 123456，繼電器已關閉，名稱已回歸預設。');
 
         if (result.broadcast?.plugName) {
           setDeviceName(result.broadcast.plugName);
@@ -109,7 +109,7 @@ export default function OperationPanel() {
         ];
 
         setRelays(defaultRelays);
-        console.log('✅ 繼電器名稱已更新為原廠預設值');
+        console.log('✅ 繼電器名稱已更新為預設值');
 
         // 如果當前在主頁面，重新整理頁面狀態
         if (currentPage === 'home') {
@@ -123,8 +123,8 @@ export default function OperationPanel() {
         throw new Error(result.error || result.details || '回復失敗');
       }
     } catch (error: any) {
-      console.error('❌ 回復原廠設定失敗:', error);
-      alert('回復原廠設定失敗: ' + error.message);
+      console.error('❌ 重置設備設定失敗:', error);
+      alert('重置設備設定失敗: ' + error.message);
     }
   };
 
@@ -570,7 +570,7 @@ export default function OperationPanel() {
             onClick={handleResetSettings}
             className="px-3 py-3 rounded-xl font-bold text-xs md:text-sm uppercase tracking-wider bg-transparent text-white border-2 border-yellow-300 hover:bg-yellow-500/20 transition-all"
           >
-            回復原廠設定
+            重置設備設定
           </button>
           <button
             onClick={handleLogout}

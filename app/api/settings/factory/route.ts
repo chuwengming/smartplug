@@ -36,29 +36,46 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        console.log(`🔄 [${clientId}] 回復原廠設定 (Plug: ${plugId})...`);
+        console.log(`🔄 [${clientId}] 重置設備設定 (Plug: ${plugId})...`);
 
         const factoryData = await fs.readFile(FACTORY_SETTINGS_PATH, 'utf-8');
         const factorySettings = JSON.parse(factoryData);
 
-        await fs.writeFile(SETTINGS_PATH, JSON.stringify(factorySettings, null, 4), 'utf-8');
-        await fs.writeFile(PUBLIC_SETTINGS_PATH, JSON.stringify(factorySettings, null, 4), 'utf-8');
+        // 合併預設 UI 設定，保留 plugId 與 ClientID（不清除連線身分）
+        const mergedSettings = {
+            ...factorySettings,
+            plugId,
+            mqtt: {
+                ...(factorySettings.mqtt || {}),
+                clientId,
+            },
+        };
 
-        console.log('💾 本機 UI 範本設定已回復（plugId／登入密碼由 session／中央資料庫管理）');
+        await fs.writeFile(SETTINGS_PATH, JSON.stringify(mergedSettings, null, 4), 'utf-8');
+        await fs.writeFile(PUBLIC_SETTINGS_PATH, JSON.stringify(mergedSettings, null, 4), 'utf-8');
 
-        // ── 同步重設登入密碼至中央資料庫（依 plugId） ──
+        console.log('💾 本機 UI 已重置為預設（plugId／ClientID 已保留；中央 registered 不變）');
+
+        // ── 同步重設登入密碼至中央資料庫（依 plugId，若已建檔） ──
         let dbPasswordUpdated = false;
+        let dbPasswordSkipReason: string | null = null;
         try {
-            dbPasswordUpdated = await updateLoginPasswordByPlugId(
+            const dbResult = await updateLoginPasswordByPlugId(
                 plugId,
                 DEFAULT_DEVICE_LOGIN_PASSWORD
             );
-            if (dbPasswordUpdated) {
+            if (dbResult === 'updated') {
+                dbPasswordUpdated = true;
                 console.log(`🔑 [Registry] 已將 plugId=${plugId} 的登入密碼重設為預設值`);
+            } else if (dbResult === 'no_database') {
+                dbPasswordSkipReason = 'DATABASE_URL 未設定，略過中央密碼同步';
+                console.log(`ℹ️ [Registry] ${dbPasswordSkipReason}（ESP32 仍會透過 MQTT 重設）`);
             } else {
-                console.warn(`⚠️ [Registry] 未找到 plugId=${plugId}，登入密碼未更新`);
+                dbPasswordSkipReason = `plug_registry 尚無 plugId=${plugId} 的出廠紀錄，略過中央密碼同步`;
+                console.log(`ℹ️ [Registry] ${dbPasswordSkipReason}（Next 登入仍可用 ESP32 預設密碼；ESP32 仍會透過 MQTT 重設）`);
             }
         } catch (err: any) {
+            dbPasswordSkipReason = err.message || '中央資料庫連線失敗';
             console.error('❌ 中央資料庫密碼更新失敗:', err.message);
         }
 
@@ -70,8 +87,8 @@ export async function POST(request: NextRequest) {
             console.warn('⚠️ MQTT 未連線，無法發送廣播訊息');
             return NextResponse.json({
                 success: true,
-                message: '原廠設定已回復，但 MQTT 未連線，無法發送廣播訊息',
-                settings: factorySettings
+                message: '設備設定已重置，但 MQTT 未連線，無法同步至設備',
+                settings: mergedSettings
             });
         }
 
@@ -147,21 +164,22 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            message: '原廠設定已成功回復並廣播',
-            settings: factorySettings,
+            message: '設備設定已成功重置並同步至設備',
+            settings: mergedSettings,
             broadcast: {
                 plugName: plugName,
                 relayNames: relayNames,
                 loginPasswordReset: dbPasswordUpdated,
+                dbPasswordSkipReason,
             }
         });
 
     } catch (error: any) {
-        console.error('❌ 回復原廠設定失敗:', error);
+        console.error('❌ 重置設備設定失敗:', error);
         return NextResponse.json(
             {
                 success: false,
-                error: '回復原廠設定失敗',
+                error: '重置設備設定失敗',
                 details: error.message || '未知錯誤'
             },
             { status: 500 }

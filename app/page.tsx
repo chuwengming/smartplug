@@ -43,7 +43,7 @@ export default function LoginPage() {
   const announceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 插座資訊
-  const [plugName, setPlugName] = useState('SmartPlug');
+  const [plugName, setPlugName] = useState('SmartPlugA');
   const [voltage, setVoltage] = useState<string>('-- V');
   const [voltageLoading, setVoltageLoading] = useState(false);
 
@@ -327,7 +327,7 @@ export default function LoginPage() {
   // Announce 狀態 UI 設定
   const announceUI = {
     waiting:      { color: 'text-yellow-700 bg-yellow-50 border-yellow-200', icon: '⏳', text: '等待 ESP32 回應中...' },
-    registered:   { color: 'text-green-700 bg-green-50 border-green-200',   icon: '✓',  text: 'ESP32 設備已授權，請輸入密碼' },
+    registered:   { color: 'text-green-700 bg-green-50 border-green-200',   icon: '✓',  text: 'SmartPlugA 設備已授權，請輸入密碼' },
     unregistered: { color: 'text-red-700 bg-red-50 border-red-200',         icon: '✗',  text: '此 ClientID 尚未在 ESP32 設備中註冊' },
     timeout:      { color: 'text-orange-700 bg-orange-50 border-orange-200', icon: '⚠', text: 'ESP32 未回應（連線逾時），請確認設備電源' },
   };
@@ -344,7 +344,7 @@ export default function LoginPage() {
         {/* PlugID 輸入區 */}
         <div className="mb-5">
           <label className="block text-black font-semibold mb-2">
-            PlugID <span className="text-gray-500 font-normal text-sm">（用於識別 ESP32 設備）</span>
+            PlugID <span className="text-gray-500 font-normal text-sm">（用於識別 SmartPlugA 設備）</span>
           </label>
           <input
             type="text"

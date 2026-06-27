@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 
 // 溫度記錄服務
-const { initTemperatureLogger, startTemperatureLogging, getLoggerStatus } = require('./lib/temperature-logger');
+const { initTemperatureLogger, startTemperatureLogging, getLoggerStatus, setTemperatureRecordingContext } = require('./lib/temperature-logger');
 const { initTimeSync, startPeriodicTimeSync } = require('./lib/ntp-client');
 
 const dev = process.env.NODE_ENV !== 'production';
@@ -313,6 +313,7 @@ const onGlobalMessage = (topic, message, sourceClientId) => {
             const payload = JSON.parse(msgStr);
             if (payload.temperature !== undefined) {
                 currentTemperature = payload.temperature;
+                lastMqttTemperatureAt = Date.now();
             }
         } catch (e) { }
     }
@@ -342,6 +343,10 @@ const onMqttMessage = (topic, message) => {
         let frontendData = null;
 
         if (category === 'temperature') {
+            if (payload.temperature !== undefined) {
+                currentTemperature = payload.temperature;
+                lastMqttTemperatureAt = Date.now();
+            }
             frontendData = {
                 type: 'sensor_data',
                 temperature: payload.temperature
@@ -506,6 +511,12 @@ async function initializeServices() {
         console.log('📝 正在初始化溫度記錄服務...');
         await initTemperatureLogger();
 
+        setTemperatureRecordingContext({
+            getRecordingState: getMqttTemperatureRecordingState,
+        });
+
+        global[Symbol.for('smartplug.temperatureLogger.getStatus')] = getLoggerStatus;
+
         // 啟動溫度記錄
         startTemperatureLogging(() => {
             return currentTemperature;
@@ -523,6 +534,48 @@ async function initializeServices() {
 }
 
 let currentTemperature = 25.0;
+let lastMqttTemperatureAt = null;
+/** ESP32 約每 10 秒發布一次；超過此時間視為無有效 MQTT 溫度 */
+const MQTT_TEMPERATURE_STALE_MS = 2 * 60 * 1000;
+
+function getMqttTemperatureRecordingState() {
+    const clients = mqttShared.getAllClients();
+    const connectedCount = clients.filter((c) => c.status === 'connected').length;
+
+    if (connectedCount === 0) {
+        return {
+            valid: false,
+            reason: 'no_mqtt_connection',
+            connectedCount,
+            lastMqttTemperatureAt,
+        };
+    }
+
+    if (!lastMqttTemperatureAt) {
+        return {
+            valid: false,
+            reason: 'no_temperature_data',
+            connectedCount,
+            lastMqttTemperatureAt: null,
+        };
+    }
+
+    if (Date.now() - lastMqttTemperatureAt > MQTT_TEMPERATURE_STALE_MS) {
+        return {
+            valid: false,
+            reason: 'stale_temperature',
+            connectedCount,
+            lastMqttTemperatureAt,
+        };
+    }
+
+    return {
+        valid: true,
+        reason: null,
+        connectedCount,
+        lastMqttTemperatureAt,
+    };
+}
 
 // 在應用準備完成後初始化服務
 app.prepare().then(async () => {

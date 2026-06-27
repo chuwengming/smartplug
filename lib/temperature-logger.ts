@@ -28,6 +28,42 @@ let lastTemperature: number | null = null;
 // 記錄器狀態
 let loggerActive = false;
 let intervalId: NodeJS.Timeout | null = null;
+let configuredIntervalMinutes = 30;
+let recordingPaused = false;
+let pauseReason: string | null = null;
+
+export type MqttRecordingState = {
+  valid: boolean;
+  reason: string | null;
+  connectedCount: number;
+  lastMqttTemperatureAt: number | null;
+};
+
+export type TemperatureRecordingContext = {
+  getRecordingState?: () => MqttRecordingState;
+};
+
+let recordingContext: TemperatureRecordingContext = {};
+
+let lastMqttDiagnostics = {
+  connectedCount: 0,
+  lastMqttTemperatureAt: null as number | null,
+};
+
+const PAUSE_REASON_TEXT: Record<string, string> = {
+  no_mqtt_connection: '無 MQTT 連線，暫停寫入',
+  no_temperature_data: '尚未收到 MQTT 溫度資料，暫停寫入',
+  stale_temperature: 'MQTT 溫度資料逾時，暫停寫入',
+};
+
+export function setTemperatureRecordingContext(context: TemperatureRecordingContext): void {
+  recordingContext = context;
+}
+
+function getPauseReasonText(reason: string | null): string | null {
+  if (!reason) return null;
+  return PAUSE_REASON_TEXT[reason] ?? reason;
+}
 
 /**
  * 初始化溫度記錄服務
@@ -108,7 +144,8 @@ export function startTemperatureLogging(
   }
   
   loggerActive = true;
-  
+  configuredIntervalMinutes = intervalMinutes;
+
   // 立即記錄一次
   recordTemperature(getTemperatureCallback).catch(error => {
     console.error('❌ 初始溫度記錄失敗:', error);
@@ -143,6 +180,21 @@ export function stopTemperatureLogging(): void {
  */
 async function recordTemperature(getTemperatureCallback: () => Promise<number> | number): Promise<void> {
   try {
+    const mqttState = recordingContext.getRecordingState?.();
+    if (mqttState) {
+      lastMqttDiagnostics = {
+        connectedCount: mqttState.connectedCount,
+        lastMqttTemperatureAt: mqttState.lastMqttTemperatureAt,
+      };
+    }
+
+    if (!mqttState?.valid) {
+      recordingPaused = true;
+      pauseReason = mqttState?.reason ?? 'no_mqtt_connection';
+      console.log(`⏸️ 溫度記錄暫停：${getPauseReasonText(pauseReason)}`);
+      return;
+    }
+
     // 獲取當前時間（使用 NTP）
     const currentTime = await getNTPTime();
     
@@ -177,6 +229,8 @@ async function recordTemperature(getTemperatureCallback: () => Promise<number> |
     // 更新最後記錄狀態
     lastRecordTime = currentTime;
     lastTemperature = temperature;
+    recordingPaused = false;
+    pauseReason = null;
     
     console.log(`📝 溫度記錄成功: ${recordLine} → ${filename}`);
     
@@ -293,14 +347,41 @@ export async function clearAllTemperatureLogs(): Promise<void> {
  */
 export function getLoggerStatus(): {
   active: boolean;
-  lastRecordTime: Date | null;
+  recordingPaused: boolean;
+  pauseReason: string | null;
+  pauseReasonText: string | null;
+  lastRecordTime: string | null;
   lastTemperature: number | null;
   intervalMinutes: number;
+  mqttConnectedCount: number;
+  lastMqttTemperatureAt: string | null;
 } {
+  const mqttState = recordingContext.getRecordingState?.();
+  if (mqttState) {
+    lastMqttDiagnostics = {
+      connectedCount: mqttState.connectedCount,
+      lastMqttTemperatureAt: mqttState.lastMqttTemperatureAt,
+    };
+    if (!mqttState.valid) {
+      recordingPaused = true;
+      pauseReason = mqttState.reason;
+    } else if (loggerActive) {
+      recordingPaused = false;
+      pauseReason = null;
+    }
+  }
+
   return {
     active: loggerActive,
-    lastRecordTime,
+    recordingPaused,
+    pauseReason,
+    pauseReasonText: getPauseReasonText(pauseReason),
+    lastRecordTime: lastRecordTime ? lastRecordTime.toISOString() : null,
     lastTemperature,
-    intervalMinutes: intervalId ? 30 : 0
+    intervalMinutes: loggerActive ? configuredIntervalMinutes : 0,
+    mqttConnectedCount: lastMqttDiagnostics.connectedCount,
+    lastMqttTemperatureAt: lastMqttDiagnostics.lastMqttTemperatureAt
+      ? new Date(lastMqttDiagnostics.lastMqttTemperatureAt).toISOString()
+      : null,
   };
 }

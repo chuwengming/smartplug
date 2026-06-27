@@ -31,11 +31,21 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const updated = factorySerial
-            ? await updateLoginPasswordByFactorySerial(factorySerial, loginPassword)
+        const result = factorySerial
+            ? ((await updateLoginPasswordByFactorySerial(factorySerial, loginPassword))
+                ? 'updated'
+                : 'not_found')
             : await updateLoginPasswordByPlugId(plugId, loginPassword);
 
-        if (!updated) {
+        if (result === 'no_database') {
+            return registryJsonResponse(
+                request,
+                { success: false, error: 'DATABASE_ERROR' },
+                503
+            );
+        }
+
+        if (result === 'not_found') {
             return registryJsonResponse(
                 request,
                 {
