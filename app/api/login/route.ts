@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMqttStatus } from '@/lib/mqtt';
-import { getLoginPasswordByPlugId } from '@/lib/registry-db';
+import { getLoginPasswordByPlugId, getUiTypeByPlugId } from '@/lib/registry-db';
 import { DEFAULT_DEVICE_LOGIN_PASSWORD } from '@/lib/mqtt-defaults';
+import { getOperationRoute } from '@/lib/ui-type';
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,8 +30,14 @@ export async function POST(request: NextRequest) {
       (await getLoginPasswordByPlugId(plugId)) ?? DEFAULT_DEVICE_LOGIN_PASSWORD;
 
     if (password === storedPassword) {
-      console.log('✅ 密碼驗證成功（中央註冊資料庫）');
-      return NextResponse.json({ success: true, message: '登入成功' });
+      const uiType = await getUiTypeByPlugId(plugId);
+      console.log(`✅ 密碼驗證成功（中央註冊資料庫），uiType=${uiType}`);
+      return NextResponse.json({
+        success: true,
+        message: '登入成功',
+        uiType,
+        operationRoute: getOperationRoute(uiType),
+      });
     }
 
     console.log('❌ 密碼驗證失敗');

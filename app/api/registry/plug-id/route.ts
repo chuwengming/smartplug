@@ -21,6 +21,15 @@ export async function GET(request: NextRequest) {
             return registryJsonResponse(request, { success: false, error: 'UNKNOWN_SERIAL' }, 404);
         }
 
+        if (row.registered === 'Yes') {
+            console.warn(`⚠️ [Registry] 出廠編號已配號: ${factorySerial}`);
+            return registryJsonResponse(
+                request,
+                { success: false, error: 'ALREADY_REGISTERED' },
+                409
+            );
+        }
+
         console.log(`✅ [Registry] ${factorySerial} → plugId=${row.plug_id}`);
 
         return registryJsonResponse(request, {

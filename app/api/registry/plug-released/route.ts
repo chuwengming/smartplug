@@ -1,18 +1,18 @@
 import { NextRequest } from 'next/server';
-import { markPlugIdAssignedByFactorySerial, getRegistryByFactorySerial } from '@/lib/registry-db';
+import { releasePlugByFactorySerial } from '@/lib/registry-db';
 import { registryJsonResponse, registryOptionsResponse } from '@/lib/registry-cors';
 
 /**
- * POST /api/registry/plug-assigned
+ * POST /api/registry/plug-released
  * Body: { factorySerial }
- * ESP32 已成功將中央配發的 PlugID 寫入 NVS 後由註冊頁呼叫
+ * ESP32 原廠重置時釋放出廠編號（registered = No）
  */
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
         const factorySerial = body?.factorySerial as string | undefined;
 
-        if (!factorySerial) {
+        if (!factorySerial?.trim()) {
             return registryJsonResponse(
                 request,
                 { success: false, error: 'MISSING_SERIAL' },
@@ -20,29 +20,21 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const updated = await markPlugIdAssignedByFactorySerial(factorySerial);
+        const released = await releasePlugByFactorySerial(factorySerial.trim());
 
-        if (!updated) {
-            const row = await getRegistryByFactorySerial(factorySerial);
-            if (!row) {
-                return registryJsonResponse(
-                    request,
-                    { success: false, error: 'UNKNOWN_SERIAL' },
-                    404
-                );
-            }
+        if (!released) {
             return registryJsonResponse(
                 request,
-                { success: false, error: 'ALREADY_REGISTERED' },
-                409
+                { success: false, error: 'UNKNOWN_SERIAL' },
+                404
             );
         }
 
-        console.log(`✅ [Registry] registered=Yes, created_at 已紀錄 (${factorySerial})`);
+        console.log(`✅ [Registry] registered=No（已釋放 ${factorySerial.trim()}）`);
 
         return registryJsonResponse(request, { success: true }, 200);
     } catch (error: any) {
-        console.error('❌ [Registry] plug-assigned 失敗:', error);
+        console.error('❌ [Registry] plug-released 失敗:', error);
         return registryJsonResponse(
             request,
             {

@@ -34,6 +34,7 @@ export default function LoginPage() {
 
   // MQTT 連線狀態
   const [mqttStatus, setMqttStatus] = useState<MqttStatus>('disconnected');
+  const [uiType, setUiType] = useState<'A' | 'B' | null>(null);
 
   // ClientID 衝突提示
   const [clientIdConflict, setClientIdConflict] = useState(false);
@@ -87,6 +88,27 @@ export default function LoginPage() {
       if (announceTimerRef.current) clearInterval(announceTimerRef.current);
     };
   }, []);
+
+  // ==========================================
+  // 依 plugId 查詢中央註冊 ui_type（A/B）
+  // ==========================================
+  const fetchAndStoreUiType = async (pid: string): Promise<'A' | 'B'> => {
+    try {
+      const res = await fetch(`/api/registry/ui-type?plugId=${encodeURIComponent(pid)}`);
+      const data = await res.json();
+      if (data.success && data.uiType) {
+        const type = data.uiType === 'B' ? 'B' : 'A';
+        sessionStorage.setItem('uiType', type);
+        setUiType(type);
+        return type;
+      }
+    } catch (e) {
+      console.warn('無法取得 uiType，預設 A:', e);
+    }
+    sessionStorage.setItem('uiType', 'A');
+    setUiType('A');
+    return 'A';
+  };
 
   // ==========================================
   // Announce 狀態輪詢（MQTT 連線成功後啟動）
@@ -241,7 +263,6 @@ export default function LoginPage() {
       if (data.success) {
         setMqttStatus('connected');
 
-        // 儲存連線資訊供操作頁面使用
         try {
           sessionStorage.setItem('mqttClientId', clientId);
           sessionStorage.setItem('plugId', plugId);
@@ -249,7 +270,8 @@ export default function LoginPage() {
           console.error('寫入 sessionStorage 失敗:', e);
         }
 
-        // 啟動 Announce 輪詢
+        await fetchAndStoreUiType(plugId);
+
         startAnnouncePolling(clientId);
 
       } else {
@@ -276,6 +298,10 @@ export default function LoginPage() {
     setVoltage('-- V');
     setLoginPassword('');
     setErrorMessage('');
+    setUiType(null);
+    try {
+      sessionStorage.removeItem('uiType');
+    } catch (e) { /* ignore */ }
   };
 
   // ==========================================
@@ -305,8 +331,17 @@ export default function LoginPage() {
       });
 
       if (response.ok) {
-        console.log('✅ 登入成功，載入操作面板...');
-        router.push('/operation');
+        const data = await response.json();
+        const resolvedUiType = data.uiType === 'B' ? 'B' : (uiType || 'A');
+        const operationRoute =
+          data.operationRoute || (resolvedUiType === 'B' ? '/operation-basic' : '/operation');
+
+        try {
+          sessionStorage.setItem('uiType', resolvedUiType);
+        } catch (e) { /* ignore */ }
+
+        console.log(`✅ 登入成功，uiType=${resolvedUiType} → ${operationRoute}`);
+        router.push(operationRoute);
       } else {
         const data = await response.json();
         setErrorMessage(data.message || '密碼錯誤，請重新輸入。');
@@ -426,6 +461,12 @@ export default function LoginPage() {
                 重新設定
               </button>
             </div>
+
+            {uiType && (
+              <p className="text-xs text-gray-500 mb-2 text-center">
+                操作介面類型：{uiType === 'A' ? '標準版（含點動）' : '精簡版（無點動）'}
+              </p>
+            )}
 
             {/* Announce 狀態 */}
             <div className={`p-3 rounded-lg border ${announceUI[announceStatus].color}`}>

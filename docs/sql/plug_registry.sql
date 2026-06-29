@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS plug_registry (
   plug_id          VARCHAR(16)  NOT NULL,
   login_password   VARCHAR(64)  NOT NULL DEFAULT '123456',
   registered       ENUM('Yes', 'No') NOT NULL DEFAULT 'No',
+  ui_type          VARCHAR(5)   NOT NULL DEFAULT 'A' COMMENT 'A=含點動, B=無點動',
   manufacture_date DATE         NULL,
   created_at       TIMESTAMP    NULL DEFAULT NULL COMMENT 'ESP32 配號成功時寫入',
   updated_at       TIMESTAMP    NULL DEFAULT NULL COMMENT 'ESP32 修改密碼時寫入',
